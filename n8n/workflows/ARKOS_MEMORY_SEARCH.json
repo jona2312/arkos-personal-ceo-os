@@ -11,10 +11,7 @@
       "name": "Memory Search Webhook",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2,
-      "position": [
-        200,
-        400
-      ],
+      "position": [200, 400],
       "webhookId": "arkos-memory-search"
     },
     {
@@ -23,40 +20,29 @@
           "conditions": [
             {
               "leftValue": "={{ $json.headers['x-arkos-secret'] }}",
-              "rightValue": "Y9D2LFdEVlzcqaLv7C2zn9v4V94RfP9CGuXW7FLC2iyOLSQLoOy-i9m-cdPcMS0Y",
-              "operator": {
-                "type": "string",
-                "operation": "equals"
-              }
+              "rightValue": "={{ $env.ARKOS_INTERNAL_SECRET }}",
+              "operator": { "type": "string", "operation": "equals" }
             }
           ]
         }
       },
       "id": "ms-secret-check",
-      "name": "Validate Secret",
+      "name": "Validate Internal Header",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
-      "position": [
-        400,
-        400
-      ]
+      "position": [400, 400]
     },
     {
       "parameters": {
         "respondWith": "json",
         "responseBody": "={ \"error\": \"Forbidden\" }",
-        "options": {
-          "responseCode": 403
-        }
+        "options": { "responseCode": 403 }
       },
       "id": "ms-403",
       "name": "Respond 403",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1,
-      "position": [
-        600,
-        520
-      ]
+      "position": [600, 520]
     },
     {
       "parameters": {
@@ -66,10 +52,7 @@
       "name": "Parse Search",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [
-        600,
-        300
-      ]
+      "position": [600, 300]
     },
     {
       "parameters": {
@@ -78,18 +61,9 @@
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            {
-              "name": "apikey",
-              "value": "={{ $env.SUPABASE_SERVICE_ROLE_KEY }}"
-            },
-            {
-              "name": "Authorization",
-              "value": "=Bearer {{ $env.SUPABASE_SERVICE_ROLE_KEY }}"
-            },
-            {
-              "name": "Content-Type",
-              "value": "application/json"
-            }
+            { "name": "apikey", "value": "={{ $env.SUPABASE_SERVICE_ROLE_KEY }}" },
+            { "name": "Authorization", "value": "=Bearer {{ $env.SUPABASE_SERVICE_ROLE_KEY }}" },
+            { "name": "Content-Type", "value": "application/json" }
           ]
         },
         "sendBody": true,
@@ -100,10 +74,7 @@
       "name": "Search Supabase",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [
-        800,
-        300
-      ],
+      "position": [800, 300],
       "onError": "continueRegularOutput"
     },
     {
@@ -114,106 +85,29 @@
       "name": "Format Results",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [
-        1000,
-        300
-      ]
+      "position": [1000, 300]
     },
     {
       "parameters": {
         "respondWith": "json",
         "responseBody": "={{ JSON.stringify($json) }}",
-        "options": {
-          "responseCode": 200
-        }
+        "options": { "responseCode": 200 }
       },
       "id": "ms-respond-200",
       "name": "Respond 200",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1,
-      "position": [
-        1200,
-        300
-      ]
+      "position": [1200, 300]
     }
   ],
   "connections": {
-    "Memory Search Webhook": {
-      "main": [
-        [
-          {
-            "node": "Validate Secret",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Validate Secret": {
-      "main": [
-        [
-          {
-            "node": "Parse Search",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Respond 403",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Parse Search": {
-      "main": [
-        [
-          {
-            "node": "Search Supabase",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Search Supabase": {
-      "main": [
-        [
-          {
-            "node": "Format Results",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Format Results": {
-      "main": [
-        [
-          {
-            "node": "Respond 200",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    }
+    "Memory Search Webhook": { "main": [[{ "node": "Validate Internal Header", "type": "main", "index": 0 }]] },
+    "Validate Internal Header": { "main": [[{ "node": "Parse Search", "type": "main", "index": 0 }], [{ "node": "Respond 403", "type": "main", "index": 0 }]] },
+    "Parse Search": { "main": [[{ "node": "Search Supabase", "type": "main", "index": 0 }]] },
+    "Search Supabase": { "main": [[{ "node": "Format Results", "type": "main", "index": 0 }]] },
+    "Format Results": { "main": [[{ "node": "Respond 200", "type": "main", "index": 0 }]] }
   },
-  "settings": {
-    "executionOrder": "v1"
-  },
-  "tags": [
-    {
-      "name": "arkos"
-    },
-    {
-      "name": "tool"
-    },
-    {
-      "name": "memoria"
-    }
-  ],
+  "settings": { "executionOrder": "v1" },
+  "tags": [{ "name": "arkos" }, { "name": "tool" }, { "name": "memoria" }],
   "triggerCount": 1
 }
