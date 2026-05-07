@@ -2,19 +2,12 @@
   "name": "ARKOS_SEND_WHATSAPP_AUDIO",
   "nodes": [
     {
-      "parameters": {
-        "path": "arkos-send-audio",
-        "httpMethod": "POST",
-        "responseMode": "responseNode"
-      },
+      "parameters": { "path": "arkos-send-audio", "httpMethod": "POST", "responseMode": "responseNode" },
       "id": "sa-webhook",
       "name": "Send Audio Webhook",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2,
-      "position": [
-        200,
-        400
-      ],
+      "position": [200, 400],
       "webhookId": "arkos-send-audio"
     },
     {
@@ -23,178 +16,67 @@
           "conditions": [
             {
               "leftValue": "={{ $json.headers['x-arkos-secret'] }}",
-              "rightValue": "Y9D2LFdEVlzcqaLv7C2zn9v4V94RfP9CGuXW7FLC2iyOLSQLoOy-i9m-cdPcMS0Y",
-              "operator": {
-                "type": "string",
-                "operation": "equals"
-              }
+              "rightValue": "={{ $env.ARKOS_INTERNAL_SECRET }}",
+              "operator": { "type": "string", "operation": "equals" }
             }
           ]
         }
       },
       "id": "sa-secret-check",
-      "name": "Validate Secret",
+      "name": "Validate Internal Header",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
-      "position": [
-        400,
-        400
-      ]
+      "position": [400, 400]
     },
     {
-      "parameters": {
-        "respondWith": "json",
-        "responseBody": "={ \"error\": \"Forbidden\" }",
-        "options": {
-          "responseCode": 403
-        }
-      },
+      "parameters": { "respondWith": "json", "responseBody": "={ \"error\": \"Forbidden\" }", "options": { "responseCode": 403 } },
       "id": "sa-403",
       "name": "Respond 403",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1,
-      "position": [
-        600,
-        520
-      ]
+      "position": [600, 520]
     },
     {
       "parameters": {
         "method": "POST",
         "url": "https://api.openai.com/v1/audio/speech",
         "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Authorization",
-              "value": "=Bearer {{ $env.OPENAI_API_KEY }}"
-            },
-            {
-              "name": "Content-Type",
-              "value": "application/json"
-            }
-          ]
-        },
+        "headerParameters": { "parameters": [ { "name": "Authorization", "value": "=Bearer {{ $env.OPENAI_API_KEY }}" }, { "name": "Content-Type", "value": "application/json" } ] },
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={\n  \"model\": \"gpt-4o-mini-tts\",\n  \"voice\": \"marin\",\n  \"input\": {{ JSON.stringify($json.body ? $json.body.text : $json.text) }},\n  \"response_format\": \"opus\",\n  \"speed\": 1.0\n}",
-        "options": {
-          "response": {
-            "response": {
-              "responseFormat": "file"
-            }
-          }
-        }
+        "options": { "response": { "response": { "responseFormat": "file" } } }
       },
       "id": "sa-tts",
       "name": "Generate TTS Marin",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [
-        600,
-        300
-      ]
+      "position": [600, 300]
     },
     {
-      "parameters": {
-        "jsCode": "// TODO Fase 2: subir audio a WhatsApp media y enviar\n// Por ahora retorna confirmacion de que el audio se genero\nreturn [{ json: { success: true, status: 'audio_generated_pending_upload' } }];"
-      },
+      "parameters": { "jsCode": "// TODO Fase 2: subir audio a WhatsApp media y enviar\n// Por ahora retorna confirmacion de que el audio se genero\nreturn [{ json: { success: true, status: 'audio_generated_pending_upload' } }];" },
       "id": "sa-placeholder",
       "name": "Upload & Send (TODO)",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [
-        800,
-        300
-      ]
+      "position": [800, 300]
     },
     {
-      "parameters": {
-        "respondWith": "json",
-        "responseBody": "={{ JSON.stringify($json) }}",
-        "options": {
-          "responseCode": 200
-        }
-      },
+      "parameters": { "respondWith": "json", "responseBody": "={{ JSON.stringify($json) }}", "options": { "responseCode": 200 } },
       "id": "sa-respond-200",
       "name": "Respond 200",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1,
-      "position": [
-        1000,
-        300
-      ]
+      "position": [1000, 300]
     }
   ],
   "connections": {
-    "Send Audio Webhook": {
-      "main": [
-        [
-          {
-            "node": "Validate Secret",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Validate Secret": {
-      "main": [
-        [
-          {
-            "node": "Generate TTS Marin",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Respond 403",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Generate TTS Marin": {
-      "main": [
-        [
-          {
-            "node": "Upload & Send (TODO)",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Upload & Send (TODO)": {
-      "main": [
-        [
-          {
-            "node": "Respond 200",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    }
+    "Send Audio Webhook": { "main": [[{ "node": "Validate Internal Header", "type": "main", "index": 0 }]] },
+    "Validate Internal Header": { "main": [[{ "node": "Generate TTS Marin", "type": "main", "index": 0 }], [{ "node": "Respond 403", "type": "main", "index": 0 }]] },
+    "Generate TTS Marin": { "main": [[{ "node": "Upload & Send (TODO)", "type": "main", "index": 0 }]] },
+    "Upload & Send (TODO)": { "main": [[{ "node": "Respond 200", "type": "main", "index": 0 }]] }
   },
-  "settings": {
-    "executionOrder": "v1"
-  },
-  "tags": [
-    {
-      "name": "arkos"
-    },
-    {
-      "name": "tool"
-    },
-    {
-      "name": "audio"
-    },
-    {
-      "name": "fase-2"
-    }
-  ],
+  "settings": { "executionOrder": "v1" },
+  "tags": [{ "name": "arkos" }, { "name": "tool" }, { "name": "audio" }, { "name": "fase-2" }],
   "triggerCount": 1
 }
