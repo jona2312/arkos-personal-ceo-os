@@ -1,6 +1,6 @@
 # ARKOS Personal CEO OS — Roadmap
 
-## Fase 0 — Setup [ACTUAL]
+## Fase 0 — Setup [COMPLETA]
 
 | Tarea | Estado |
 |-------|--------|
@@ -9,6 +9,9 @@
 | Crear SQL migrations | Done |
 | Crear workflow n8n base | Done |
 | Crear prompts | Done |
+| Auditoria de seguridad (secrets, input mapping, tools) | Done |
+| Hardening: env vars en todos los workflows | Done |
+| Correccion URLs tools a N8N_BASE_URL | Done |
 | Crear app Meta Developers | Pendiente (Jona) |
 | Activar WhatsApp Cloud API test | Pendiente (Jona) |
 | Crear proyecto Supabase | Pendiente (Jona) |
@@ -17,22 +20,76 @@
 
 ---
 
-## Fase 1 — MVP Conversacion Basica
+## Fase 1 — MVP Conversacion Basica [ACTUAL — en deploy]
 
-**Objetivo:** Jona escribe por WhatsApp -> ARKOS responde
+**Objetivo:** Jona escribe por WhatsApp -> ARKOS responde con memoria y aprobacion
 
-| Tarea | Dependencia |
-|-------|------------|
-| Configurar webhook en Meta | App creada |
-| Importar workflow en n8n | n8n operativo |
-| Conectar credenciales Supabase | Proyecto creado |
-| Conectar credenciales OpenAI | API key activa |
-| Test: verificacion webhook | Webhook configurado |
-| Test: recepcion mensaje | Webhook verificado |
-| Test: guardado en Supabase | Credenciales OK |
-| Test: clasificacion Router | OpenAI conectado |
-| Test: respuesta WhatsApp | Todo conectado |
-| Completar checklist Fase 1 | Todos los tests |
+**Tools activas en Fase 1:** search_memory, write_memory, request_approval
+
+**Tools NO activas en Fase 1:** send_whatsapp_text, send_whatsapp_audio (INBOX responde)
+
+| # | Tarea | Dependencia | Estado |
+|---|-------|------------|--------|
+| 1 | Rotar ARKOS_INTERNAL_SECRET y WHATSAPP_VERIFY_TOKEN | Auditoria OK | Pendiente |
+| 2 | Cargar 10 variables de entorno en n8n | Secrets rotados | Pendiente |
+| 3 | Crear credencial OpenAI en n8n | API key activa | Pendiente |
+| 4 | Importar 7 workflows en n8n (orden documentado) | Variables cargadas | Pendiente |
+| 5 | Asignar credencial OpenAI al CEO Agent | Workflows importados | Pendiente |
+| 6 | Activar todos los workflows | Credenciales OK | Pendiente |
+| 7 | Crear app Meta Developers | Cuenta Meta | Pendiente (Jona) |
+| 8 | Configurar webhook Meta con URL n8n | App creada + workflows activos | Pendiente |
+| 9 | Test: verificacion webhook GET | Webhook configurado | Pendiente |
+| 10 | Test: "Hola Arkos" por WhatsApp | Webhook verificado | Pendiente |
+| 11 | Test: memoria write ("anota que...") | Test 10 OK | Pendiente |
+| 12 | Test: memoria search ("que tengo pendiente") | Test 11 OK | Pendiente |
+| 13 | Test: aprobacion ("manda mail a X") | Test 12 OK | Pendiente |
+| 14 | Test: numero no autorizado | Test 10 OK | Pendiente |
+| 15 | Completar checklist Fase 1 | Todos los tests OK | Pendiente |
+
+---
+
+## Fase 1.5 — Subagentes Internos
+
+**Objetivo:** Delegar logica especializada a 3 subagentes sin cambiar la interfaz de Jona
+
+**Regla:** Jona solo habla con ARKOS CEO. Los subagentes son internos e invisibles.
+
+**Criterio de activacion (todos deben cumplirse antes de construir):**
+
+| Criterio | Descripcion |
+|----------|-------------|
+| Test "Hola Arkos" | Flujo completo funciona |
+| Test memoria write | write_memory guarda en Supabase |
+| Test memoria search | search_memory retorna resultados |
+| Test aprobacion | request_approval crea registro |
+| Test numero no autorizado | Mensaje descartado sin procesar |
+| Estabilidad | 24-48 hs de uso sin fallos criticos |
+
+**Subagentes a crear:**
+
+| Workflow | Department | Responsabilidades |
+|----------|-----------|-------------------|
+| ARKOS_AGENT_AGENDA_OPS | Agenda & Operaciones | Tareas, recordatorios, calendario, foco diario, pendientes por persona, resumen diario/semanal |
+| ARKOS_AGENT_DOCS_COMMS | Documentos & Comunicacion | Mails, minutas, borradores, documentos, decisiones, seguimiento de conversaciones |
+| ARKOS_AGENT_FINANCE_CONTROL | Finanzas & Control | Gastos, facturas, tickets, comprobantes, vencimientos, clasificacion casa/empresa/proyecto |
+
+**Arquitectura de delegacion:**
+
+```
+Jona -> WhatsApp -> INBOX -> CEO Agent
+                                |
+                    clasifica department
+                                |
+              +--------+--------+--------+
+              |                 |                 |
+        AGENDA_OPS      DOCS_COMMS    FINANCE_CONTROL
+              |                 |                 |
+              +--------+--------+--------+
+                                |
+                    CEO Agent consolida
+                                |
+                    INBOX -> WhatsApp -> Jona
+```
 
 ---
 
@@ -45,8 +102,8 @@
 | Descargar media desde WhatsApp Cloud API | Fase 1 completa |
 | Transcribir audio con Whisper | Media descargado |
 | Guardar transcripcion en arkos_messages | Transcripcion OK |
-| Enviar transcripcion al Router | Flujo existente |
-| Generar audio con gpt-4o-mini-tts Marin | Respuesta del Router |
+| Enviar transcripcion al CEO Agent | Flujo existente |
+| Generar audio con gpt-4o-mini-tts Marin | Respuesta del Agent |
 | Subir audio a WhatsApp Media | Audio generado |
 | Enviar mensaje tipo audio | Media subido |
 

@@ -72,13 +72,25 @@ agenda_ops  docs_comms  finance_control
 |----------|---------|
 | ARKOS_CEO_AGENT | Cerebro central. Consulta memoria, clasifica, decide, ejecuta tools, responde |
 
-### Sub-agentes (futuro, por ahora el CEO Agent maneja los 3 departments)
+### Sub-agentes (post Fase 1 estable — NO construir antes del deploy)
 
-| Workflow | Department | Estado |
-|----------|-----------|--------|
-| ARKOS_AGENT_AGENDA_OPS | Tareas, recordatorios, calendario, foco | Dia 4 |
-| ARKOS_AGENT_DOCS_COMMS | Mails, minutas, decisiones, borradores | Dia 4 |
-| ARKOS_AGENT_FINANCE_CONTROL | Gastos, facturas, vencimientos | Dia 4 |
+Jona nunca habla directamente con los subagentes. Solo habla con ARKOS CEO.
+ARKOS_CEO_AGENT decide internamente si delega a un subagente y luego responde a Jona.
+
+| Workflow | Department | Responsabilidades | Estado |
+|----------|-----------|-------------------|--------|
+| ARKOS_AGENT_AGENDA_OPS | Agenda & Operaciones | Tareas, recordatorios, calendario, foco diario, pendientes por persona, resumen diario/semanal | Post Fase 1 |
+| ARKOS_AGENT_DOCS_COMMS | Documentos & Comunicacion | Mails, minutas, borradores, documentos, decisiones, seguimiento de conversaciones | Post Fase 1 |
+| ARKOS_AGENT_FINANCE_CONTROL | Finanzas & Control | Gastos, facturas, tickets, comprobantes, vencimientos, clasificacion casa/empresa/proyecto | Post Fase 1 |
+
+Criterio de activacion de subagentes (todos deben cumplirse):
+
+1. Test "Hola Arkos" OK
+2. Test memoria write OK
+3. Test memoria search OK
+4. Test aprobacion OK
+5. Test numero no autorizado OK
+6. 24-48 hs de uso estable sin fallos criticos
 
 ### Tools (sub-workflows)
 
