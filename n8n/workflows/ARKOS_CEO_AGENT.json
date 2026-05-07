@@ -116,7 +116,7 @@
         "name": "search_memory",
         "description": "Search ARKOS semantic memory for relevant context. Use when user asks about past conversations, tasks, decisions, or any stored information. Input: query string.",
         "method": "POST",
-        "url": "https://n8n.inbigfinanzas.com/webhook/arkos-memory-search",
+        "url": "={{$env.N8N_BASE_URL}}/webhook/arkos-memory-search",
         "sendHeaders": true,
         "parametersHeaders": {
           "values": [
@@ -157,7 +157,7 @@
         "name": "write_memory",
         "description": "Save important information to ARKOS persistent memory. Use for decisions, tasks, notes, reminders, meeting outcomes. Input: content string, memory_type (conversation/task/decision/meeting/expense), area (agenda/documentos/finanzas), project name.",
         "method": "POST",
-        "url": "https://n8n.inbigfinanzas.com/webhook/arkos-memory-write",
+        "url": "={{$env.N8N_BASE_URL}}/webhook/arkos-memory-write",
         "sendHeaders": true,
         "parametersHeaders": {
           "values": [
@@ -198,7 +198,7 @@
         "name": "request_approval",
         "description": "Request human approval for sensitive actions. Use when user asks to send messages to third parties, move meetings, confirm payments, delete data, or share documents. Input: action_type, action_description, action_payload.",
         "method": "POST",
-        "url": "https://n8n.inbigfinanzas.com/webhook/arkos-approval-handler",
+        "url": "={{$env.N8N_BASE_URL}}/webhook/arkos-approval",
         "sendHeaders": true,
         "parametersHeaders": {
           "values": [
