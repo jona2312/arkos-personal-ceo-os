@@ -1,0 +1,267 @@
+{
+  "name": "ARKOS_WHATSAPP_CLOUD_INBOX",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "={{$json[\"method\"]}}",
+        "path": "arkos-whatsapp",
+        "options": {
+          "rawBody": true
+        },
+        "responseMode": "responseNode"
+      },
+      "id": "webhook-trigger",
+      "name": "WhatsApp Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [250, 300],
+      "webhookId": "arkos-whatsapp"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "verify-check",
+              "leftValue": "={{ $json.query['hub.mode'] }}",
+              "rightValue": "subscribe",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ]
+        }
+      },
+      "id": "is-verification",
+      "name": "Is Verification?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [470, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "={{ $json.query['hub.challenge'] }}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "verify-response",
+      "name": "Respond Challenge",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [690, 200]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parsear payload de WhatsApp Cloud API\nconst body = $input.first().json.body;\n\nif (!body || !body.entry || !body.entry[0]) {\n  return [{ json: { skip: true, reason: 'no_entry' } }];\n}\n\nconst entry = body.entry[0];\nconst changes = entry.changes;\n\nif (!changes || !changes[0] || !changes[0].value) {\n  return [{ json: { skip: true, reason: 'no_changes' } }];\n}\n\nconst value = changes[0].value;\n\nif (!value.messages || value.messages.length === 0) {\n  return [{ json: { skip: true, reason: 'status_update_only' } }];\n}\n\nconst message = value.messages[0];\nconst contact = value.contacts ? value.contacts[0] : {};\n\nconst result = {\n  skip: false,\n  message_id: message.id,\n  from: message.from,\n  timestamp: message.timestamp,\n  type: message.type,\n  contact_name: contact.profile ? contact.profile.name : '',\n  text: message.type === 'text' ? message.text.body : null,\n  audio_id: message.type === 'audio' ? message.audio.id : null,\n  image_id: message.type === 'image' ? message.image.id : null,\n  document_id: message.type === 'document' ? message.document.id : null,\n  caption: message.image ? message.image.caption : (message.document ? message.document.caption : null),\n  phone_number_id: value.metadata.phone_number_id,\n  display_phone: value.metadata.display_phone_number\n};\n\nreturn [{ json: result }];"
+      },
+      "id": "parse-message",
+      "name": "Parse WhatsApp Message",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [690, 400]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "conditions": [
+            {
+              "leftValue": "={{ $json.skip }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ]
+        }
+      },
+      "id": "should-skip",
+      "name": "Should Skip?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [910, 400]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={ \"status\": \"ok\" }",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "respond-200-skip",
+      "name": "Respond 200 Skip",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1130, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.SUPABASE_URL }}/rest/v1/arkos_messages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "={{ $env.SUPABASE_SERVICE_ROLE_KEY }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Prefer",
+              "value": "return=representation"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"user_id\": \"{{ $env.OWNER_USER_ID }}\",\n  \"direction\": \"inbound\",\n  \"channel\": \"whatsapp\",\n  \"message_type\": \"{{ $json.type }}\",\n  \"external_message_id\": \"{{ $json.message_id }}\",\n  \"from_phone\": \"{{ $json.from }}\",\n  \"to_phone\": \"{{ $json.display_phone }}\",\n  \"text_content\": {{ JSON.stringify($json.text || '') }},\n  \"media_id\": {{ JSON.stringify($json.audio_id || $json.image_id || $json.document_id || null) }},\n  \"processed\": false\n}"
+      },
+      "id": "save-message",
+      "name": "Save to Supabase",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1130, 500]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.openai.com/v1/chat/completions",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"gpt-4o-mini\",\n  \"temperature\": 0.3,\n  \"response_format\": { \"type\": \"json_object\" },\n  \"messages\": [\n    {\n      \"role\": \"system\",\n      \"content\": \"Eres ARKOS, el asistente ejecutivo personal de Jona Romero, CEO de INB. Tu rol es clasificar la intencion del mensaje y responder de forma natural, directa y ejecutiva.\\n\\nDepartamentos internos:\\n1. agenda_ops: tareas, recordatorios, calendario, foco del dia\\n2. docs_comms: mails, minutas, decisiones, borradores\\n3. finance_control: gastos, facturas, vencimientos, clasificacion\\n4. ceo: conversacion general, consultas estrategicas\\n\\nIntents validos: create_items, query, update_item, chat, approval_response, morning_briefing, evening_review\\n\\nReglas:\\n- Si el usuario pide crear tarea/nota/recordatorio: intent=create_items\\n- Si pregunta que tiene hoy o pendientes: intent=query\\n- Si saluda o conversa: intent=chat\\n- Si dice si/no a una aprobacion: intent=approval_response\\n- Nunca inventes datos\\n- Responde en espanol natural\\n- Siempre genera confirmation_message amigable y ejecutivo\\n\\nResponde SIEMPRE en JSON con esta estructura:\\n{\\n  \\\"intent\\\": \\\"string\\\",\\n  \\\"department\\\": \\\"string\\\",\\n  \\\"items\\\": [],\\n  \\\"confirmation_message\\\": \\\"string\\\",\\n  \\\"requires_approval\\\": false\\n}\"\n    },\n    {\n      \"role\": \"user\",\n      \"content\": {{ JSON.stringify($node['Parse WhatsApp Message'].json.text || 'Mensaje sin texto') }}\n    }\n  ]\n}"
+      },
+      "id": "arkos-router",
+      "name": "ARKOS CEO Router",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1350, 500]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Procesar respuesta del Router\nconst responseBody = $input.first().json;\nlet routerResponse;\n\ntry {\n  routerResponse = JSON.parse(responseBody.choices[0].message.content);\n} catch(e) {\n  routerResponse = {\n    intent: 'chat',\n    department: 'ceo',\n    items: [],\n    confirmation_message: 'Perdon Jona, no logre procesar eso. Podrias repetirlo?',\n    requires_approval: false\n  };\n}\n\nconst originalMessage = $node['Parse WhatsApp Message'].json;\n\nreturn [{ json: {\n  ...routerResponse,\n  original_from: originalMessage.from,\n  original_text: originalMessage.text,\n  phone_number_id: originalMessage.phone_number_id\n}}];"
+      },
+      "id": "process-response",
+      "name": "Process Router Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1570, 500]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://graph.facebook.com/v21.0/{{ $json.phone_number_id }}/messages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"messaging_product\": \"whatsapp\",\n  \"to\": \"{{ $json.original_from }}\",\n  \"type\": \"text\",\n  \"text\": {\n    \"body\": {{ JSON.stringify($json.confirmation_message) }}\n  }\n}"
+      },
+      "id": "send-whatsapp",
+      "name": "Send WhatsApp Response",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1790, 500]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={ \"status\": \"ok\" }",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "respond-200",
+      "name": "Respond 200",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [2010, 500]
+    }
+  ],
+  "connections": {
+    "WhatsApp Webhook": {
+      "main": [
+        [{ "node": "Is Verification?", "type": "main", "index": 0 }]
+      ]
+    },
+    "Is Verification?": {
+      "main": [
+        [{ "node": "Respond Challenge", "type": "main", "index": 0 }],
+        [{ "node": "Parse WhatsApp Message", "type": "main", "index": 0 }]
+      ]
+    },
+    "Parse WhatsApp Message": {
+      "main": [
+        [{ "node": "Should Skip?", "type": "main", "index": 0 }]
+      ]
+    },
+    "Should Skip?": {
+      "main": [
+        [{ "node": "Respond 200 Skip", "type": "main", "index": 0 }],
+        [{ "node": "Save to Supabase", "type": "main", "index": 0 }]
+      ]
+    },
+    "Save to Supabase": {
+      "main": [
+        [{ "node": "ARKOS CEO Router", "type": "main", "index": 0 }]
+      ]
+    },
+    "ARKOS CEO Router": {
+      "main": [
+        [{ "node": "Process Router Response", "type": "main", "index": 0 }]
+      ]
+    },
+    "Process Router Response": {
+      "main": [
+        [{ "node": "Send WhatsApp Response", "type": "main", "index": 0 }]
+      ]
+    },
+    "Send WhatsApp Response": {
+      "main": [
+        [{ "node": "Respond 200", "type": "main", "index": 0 }]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "tags": [
+    { "name": "arkos" },
+    { "name": "whatsapp" },
+    { "name": "fase-1" }
+  ],
+  "triggerCount": 1
+}

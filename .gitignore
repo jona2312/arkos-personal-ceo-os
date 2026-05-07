@@ -1,0 +1,33 @@
+# Environment
+.env
+.env.local
+.env.production
+
+# Node
+node_modules/
+.next/
+out/
+dist/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
+# Logs
+*.log
+npm-debug.log*
+
+# Supabase local
+.supabase/
+
+# n8n credentials (never commit)
+n8n-creds/
+
+# Temp
+tmp/
+.tmp/
+n8n/workflows/deploy/

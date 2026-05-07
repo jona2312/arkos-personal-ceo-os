@@ -1,0 +1,198 @@
+{
+  "name": "ARKOS_APPROVAL_HANDLER",
+  "nodes": [
+    {
+      "parameters": {
+        "path": "arkos-approval",
+        "httpMethod": "POST",
+        "responseMode": "responseNode"
+      },
+      "id": "ap-webhook",
+      "name": "Approval Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        200,
+        400
+      ],
+      "webhookId": "arkos-approval"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "conditions": [
+            {
+              "leftValue": "={{ $json.headers['x-arkos-secret'] }}",
+              "rightValue": "Y9D2LFdEVlzcqaLv7C2zn9v4V94RfP9CGuXW7FLC2iyOLSQLoOy-i9m-cdPcMS0Y",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ]
+        }
+      },
+      "id": "ap-secret-check",
+      "name": "Validate Secret",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        400,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={ \"error\": \"Forbidden\" }",
+        "options": {
+          "responseCode": 403
+        }
+      },
+      "id": "ap-403",
+      "name": "Respond 403",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        600,
+        520
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.SUPABASE_URL }}/rest/v1/arkos_approvals",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "={{ $env.SUPABASE_SERVICE_ROLE_KEY }}"
+            },
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.SUPABASE_SERVICE_ROLE_KEY }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Prefer",
+              "value": "return=representation"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"user_id\": \"{{ $json.body.user_id || $json.user_id }}\",\n  \"action_type\": \"{{ $json.body.action_type || $json.action_type }}\",\n  \"action_description\": {{ JSON.stringify($json.body ? $json.body.description : $json.description) }},\n  \"action_payload\": {{ JSON.stringify($json.body ? $json.body.payload : $json.payload || {}) }},\n  \"status\": \"pending\",\n  \"expires_at\": \"{{ new Date(Date.now() + 24*60*60*1000).toISOString() }}\"\n}"
+      },
+      "id": "ap-save",
+      "name": "Save Approval Request",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        600,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const saved = $input.first().json;\nreturn [{ json: { success: true, approval_id: Array.isArray(saved) ? saved[0]?.id : saved?.id, status: 'pending' } }];"
+      },
+      "id": "ap-confirm",
+      "name": "Confirm Created",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        800,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "ap-respond-200",
+      "name": "Respond 200",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        1000,
+        300
+      ]
+    }
+  ],
+  "connections": {
+    "Approval Webhook": {
+      "main": [
+        [
+          {
+            "node": "Validate Secret",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Secret": {
+      "main": [
+        [
+          {
+            "node": "Save Approval Request",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond 403",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save Approval Request": {
+      "main": [
+        [
+          {
+            "node": "Confirm Created",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Confirm Created": {
+      "main": [
+        [
+          {
+            "node": "Respond 200",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "tags": [
+    {
+      "name": "arkos"
+    },
+    {
+      "name": "tool"
+    },
+    {
+      "name": "aprobacion"
+    }
+  ],
+  "triggerCount": 1
+}
