@@ -5,19 +5,14 @@
       "parameters": {
         "path": "arkos-whatsapp",
         "httpMethod": "POST",
-        "options": {
-          "rawBody": true
-        },
+        "options": { "rawBody": true },
         "responseMode": "responseNode"
       },
       "id": "wh-trigger",
       "name": "WhatsApp Webhook POST",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2,
-      "position": [
-        200,
-        400
-      ],
+      "position": [200, 400],
       "webhookId": "arkos-whatsapp"
     },
     {
@@ -30,162 +25,75 @@
       "name": "WhatsApp Verify GET",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2,
-      "position": [
-        200,
-        100
-      ],
+      "position": [200, 100],
       "webhookId": "arkos-whatsapp-verify"
     },
     {
       "parameters": {
-        "jsCode": "// === META WEBHOOK VERIFICATION (GET) ===\nconst query = $input.first().json.query || {};\nconst mode = query['hub.mode'];\nconst token = query['hub.verify_token'];\nconst challenge = query['hub.challenge'];\n\nconst VERIFY_TOKEN = 'UsYwpKZhOv9oVVd8TXXFM5d-GTMZ6LfMvINBdn734AE';\n\nif (mode === 'subscribe' && token === VERIFY_TOKEN) {\n  console.log('[ARKOS] Meta verification OK');\n  return [{ json: { challenge: challenge, verified: true } }];\n} else {\n  console.log('[ARKOS] Meta verification FAILED: bad token');\n  return [{ json: { verified: false } }];\n}"
+        "jsCode": "// === META WEBHOOK VERIFICATION (GET) ===\nconst query = $input.first().json.query || {};\nconst mode = query['hub.mode'];\nconst token = query['hub.verify_token'];\nconst challenge = query['hub.challenge'];\nconst verifyToken = $env.WHATSAPP_VERIFY_TOKEN;\n\nif (mode === 'subscribe' && verifyToken && token === verifyToken) {\n  return [{ json: { challenge, verified: true } }];\n}\n\nreturn [{ json: { verified: false } }];"
       },
       "id": "validate-verify",
       "name": "Validate Verify Token",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [
-        420,
-        100
-      ]
+      "position": [420, 100]
     },
     {
-      "parameters": {
-        "conditions": {
-          "conditions": [
-            {
-              "leftValue": "={{ $json.verified }}",
-              "rightValue": true,
-              "operator": {
-                "type": "boolean",
-                "operation": "equals"
-              }
-            }
-          ]
-        }
-      },
+      "parameters": { "conditions": { "conditions": [ { "leftValue": "={{ $json.verified }}", "rightValue": true, "operator": { "type": "boolean", "operation": "equals" } } ] } },
       "id": "verify-check",
       "name": "Verified?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
-      "position": [
-        640,
-        100
-      ]
+      "position": [640, 100]
     },
     {
-      "parameters": {
-        "respondWith": "text",
-        "responseBody": "={{ $node['Validate Verify Token'].json.challenge }}",
-        "options": {
-          "responseCode": 200
-        }
-      },
+      "parameters": { "respondWith": "text", "responseBody": "={{ $node['Validate Verify Token'].json.challenge }}", "options": { "responseCode": 200 } },
       "id": "respond-challenge",
       "name": "Respond Challenge",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1,
-      "position": [
-        860,
-        0
-      ]
+      "position": [860, 0]
     },
     {
-      "parameters": {
-        "respondWith": "json",
-        "responseBody": "={ \"error\": \"Forbidden\" }",
-        "options": {
-          "responseCode": 403
-        }
-      },
+      "parameters": { "respondWith": "json", "responseBody": "={ \"error\": \"Forbidden\" }", "options": { "responseCode": 403 } },
       "id": "respond-verify-403",
       "name": "Respond Verify 403",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1,
-      "position": [
-        860,
-        200
-      ]
+      "position": [860, 200]
     },
     {
       "parameters": {
-        "jsCode": "// === PARSE + VALIDATE WHATSAPP CLOUD API PAYLOAD ===\ntry {\n  const body = $input.first().json.body;\n\n  if (!body || !body.entry || !body.entry[0]) {\n    console.log('[ARKOS] Skip: no entry in payload');\n    return [{ json: { skip: true, reason: 'no_entry' } }];\n  }\n\n  const changes = body.entry[0].changes;\n  if (!changes || !changes[0] || !changes[0].value) {\n    console.log('[ARKOS] Skip: no changes');\n    return [{ json: { skip: true, reason: 'no_changes' } }];\n  }\n\n  const value = changes[0].value;\n\n  // Solo procesar mensajes, no status updates\n  if (!value.messages || value.messages.length === 0) {\n    console.log('[ARKOS] Skip: status update only');\n    return [{ json: { skip: true, reason: 'status_update_only' } }];\n  }\n\n  const msg = value.messages[0];\n  const contact = value.contacts ? value.contacts[0] : {};\n\n  // === VALIDAR NUMERO AUTORIZADO ===\n  const authorizedPhone = ($env.AUTHORIZED_OWNER_PHONE || '').toString().replace(/\\D/g, '');\n  const fromClean = msg.from.replace(/\\D/g, '');\n  \n  if (authorizedPhone && !fromClean.includes(authorizedPhone)) {\n    console.log('[ARKOS] BLOCKED: numero no autorizado:', msg.from);\n    return [{ json: { skip: true, reason: 'unauthorized_number', from: msg.from } }];\n  }\n\n  console.log('[ARKOS] Mensaje recibido de', msg.from, '- tipo:', msg.type);\n\n  // === NORMALIZAR INPUT ===\n  let normalizedInput = '';\n  switch(msg.type) {\n    case 'text': normalizedInput = msg.text.body; break;\n    case 'audio': normalizedInput = '[AUDIO_PENDIENTE_TRANSCRIPCION]'; break;\n    case 'image': normalizedInput = msg.image.caption || '[IMAGEN_RECIBIDA]'; break;\n    case 'document': normalizedInput = msg.document.caption || '[DOCUMENTO_RECIBIDO]'; break;\n    default: normalizedInput = '[TIPO_NO_SOPORTADO: ' + msg.type + ']';\n  }\n\n  return [{ json: {\n    skip: false,\n    message_id: msg.id,\n    from: msg.from,\n    timestamp: msg.timestamp,\n    type: msg.type,\n    contact_name: contact.profile ? contact.profile.name : 'Jona',\n    text: msg.type === 'text' ? msg.text.body : null,\n    audio_id: msg.type === 'audio' ? msg.audio.id : null,\n    image_id: msg.type === 'image' ? msg.image.id : null,\n    document_id: msg.type === 'document' ? msg.document.id : null,\n    caption: msg.image ? msg.image.caption : (msg.document ? msg.document.caption : null),\n    phone_number_id: value.metadata.phone_number_id,\n    display_phone: value.metadata.display_phone_number,\n    normalized_input: normalizedInput\n  }}];\n} catch(err) {\n  console.error('[ARKOS] Error parseando payload:', err.message);\n  return [{ json: { skip: true, reason: 'parse_error', error: err.message } }];\n}"
+        "jsCode": "// === PARSE + VALIDATE WHATSAPP CLOUD API PAYLOAD ===\ntry {\n  const body = $input.first().json.body;\n\n  if (!body || !body.entry || !body.entry[0]) return [{ json: { skip: true, reason: 'no_entry' } }];\n\n  const changes = body.entry[0].changes;\n  if (!changes || !changes[0] || !changes[0].value) return [{ json: { skip: true, reason: 'no_changes' } }];\n\n  const value = changes[0].value;\n  if (!value.messages || value.messages.length === 0) return [{ json: { skip: true, reason: 'status_update_only' } }];\n\n  const msg = value.messages[0];\n  const contact = value.contacts ? value.contacts[0] : {};\n\n  const authorizedPhone = ($env.AUTHORIZED_OWNER_PHONE || '').toString().replace(/\\D/g, '');\n  const fromClean = msg.from.replace(/\\D/g, '');\n  if (authorizedPhone && !fromClean.includes(authorizedPhone)) {\n    return [{ json: { skip: true, reason: 'unauthorized_number', from: msg.from } }];\n  }\n\n  let normalizedInput = '';\n  switch (msg.type) {\n    case 'text': normalizedInput = msg.text.body; break;\n    case 'audio': normalizedInput = '[AUDIO_PENDIENTE_TRANSCRIPCION]'; break;\n    case 'image': normalizedInput = msg.image.caption || '[IMAGEN_RECIBIDA]'; break;\n    case 'document': normalizedInput = msg.document.caption || '[DOCUMENTO_RECIBIDO]'; break;\n    default: normalizedInput = '[TIPO_NO_SOPORTADO: ' + msg.type + ']';\n  }\n\n  return [{ json: {\n    skip: false,\n    message_id: msg.id,\n    from: msg.from,\n    timestamp: msg.timestamp,\n    type: msg.type,\n    contact_name: contact.profile ? contact.profile.name : 'Jona',\n    text: msg.type === 'text' ? msg.text.body : null,\n    audio_id: msg.type === 'audio' ? msg.audio.id : null,\n    image_id: msg.type === 'image' ? msg.image.id : null,\n    document_id: msg.type === 'document' ? msg.document.id : null,\n    caption: msg.image ? msg.image.caption : (msg.document ? msg.document.caption : null),\n    phone_number_id: value.metadata.phone_number_id,\n    display_phone: value.metadata.display_phone_number,\n    normalized_input: normalizedInput\n  }}];\n} catch (err) {\n  return [{ json: { skip: true, reason: 'parse_error', error: err.message } }];\n}"
       },
       "id": "parse-validate",
       "name": "Parse & Validate",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [
-        420,
-        400
-      ]
+      "position": [420, 400]
     },
     {
-      "parameters": {
-        "conditions": {
-          "conditions": [
-            {
-              "leftValue": "={{ $json.skip }}",
-              "rightValue": true,
-              "operator": {
-                "type": "boolean",
-                "operation": "equals"
-              }
-            }
-          ]
-        }
-      },
+      "parameters": { "conditions": { "conditions": [ { "leftValue": "={{ $json.skip }}", "rightValue": true, "operator": { "type": "boolean", "operation": "equals" } } ] } },
       "id": "should-skip",
       "name": "Should Skip?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
-      "position": [
-        640,
-        400
-      ]
+      "position": [640, 400]
     },
     {
-      "parameters": {
-        "respondWith": "json",
-        "responseBody": "={ \"status\": \"ok\" }",
-        "options": {
-          "responseCode": 200
-        }
-      },
+      "parameters": { "respondWith": "json", "responseBody": "={ \"status\": \"ok\" }", "options": { "responseCode": 200 } },
       "id": "respond-skip",
       "name": "Respond 200 Skip",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1,
-      "position": [
-        860,
-        300
-      ]
+      "position": [860, 300]
     },
     {
       "parameters": {
         "method": "POST",
         "url": "={{ $env.SUPABASE_URL }}/rest/v1/arkos_messages",
         "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "apikey",
-              "value": "={{ $env.SUPABASE_SERVICE_ROLE_KEY }}"
-            },
-            {
-              "name": "Authorization",
-              "value": "=Bearer {{ $env.SUPABASE_SERVICE_ROLE_KEY }}"
-            },
-            {
-              "name": "Content-Type",
-              "value": "application/json"
-            },
-            {
-              "name": "Prefer",
-              "value": "return=representation"
-            }
-          ]
-        },
+        "headerParameters": { "parameters": [ { "name": "apikey", "value": "={{ $env.SUPABASE_SERVICE_ROLE_KEY }}" }, { "name": "Authorization", "value": "=Bearer {{ $env.SUPABASE_SERVICE_ROLE_KEY }}" }, { "name": "Content-Type", "value": "application/json" }, { "name": "Prefer", "value": "return=representation" } ] },
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={\n  \"user_id\": \"{{ $env.OWNER_USER_ID }}\",\n  \"direction\": \"inbound\",\n  \"channel\": \"whatsapp\",\n  \"message_type\": \"{{ $json.type }}\",\n  \"external_message_id\": \"{{ $json.message_id }}\",\n  \"from_phone\": \"{{ $json.from }}\",\n  \"to_phone\": \"{{ $json.display_phone }}\",\n  \"text_content\": {{ JSON.stringify($json.text || '') }},\n  \"media_url\": null,\n  \"media_id\": {{ JSON.stringify($json.audio_id || $json.image_id || $json.document_id || null) }},\n  \"transcription\": null,\n  \"intent\": null,\n  \"department\": null,\n  \"parsed_json\": null,\n  \"processed\": false,\n  \"processing_error\": null\n}"
@@ -194,10 +102,7 @@
       "name": "Save Inbound",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [
-        860,
-        500
-      ],
+      "position": [860, 500],
       "onError": "continueRegularOutput"
     },
     {
@@ -205,65 +110,35 @@
         "method": "POST",
         "url": "={{ $env.N8N_BASE_URL }}/webhook/arkos-ceo-agent",
         "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Content-Type",
-              "value": "application/json"
-            },
-            {
-              "name": "x-arkos-secret",
-              "value": "={{ $env.ARKOS_INTERNAL_SECRET }}"
-            }
-          ]
-        },
+        "headerParameters": { "parameters": [ { "name": "Content-Type", "value": "application/json" }, { "name": "x-arkos-secret", "value": "={{ $env.ARKOS_INTERNAL_SECRET }}" } ] },
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={\n  \"user_id\": \"{{ $env.OWNER_USER_ID }}\",\n  \"from\": \"{{ $node['Parse & Validate'].json.from }}\",\n  \"phone_number_id\": \"{{ $node['Parse & Validate'].json.phone_number_id }}\",\n  \"message_type\": \"{{ $node['Parse & Validate'].json.type }}\",\n  \"input\": {{ JSON.stringify($node['Parse & Validate'].json.normalized_input) }},\n  \"contact_name\": {{ JSON.stringify($node['Parse & Validate'].json.contact_name) }},\n  \"message_id\": \"{{ $node['Parse & Validate'].json.message_id }}\",\n  \"audio_id\": {{ JSON.stringify($node['Parse & Validate'].json.audio_id) }},\n  \"image_id\": {{ JSON.stringify($node['Parse & Validate'].json.image_id) }},\n  \"timestamp\": \"{{ $node['Parse & Validate'].json.timestamp }}\"\n}",
-        "options": {
-          "timeout": 30000
-        }
+        "options": { "timeout": 30000 }
       },
       "id": "call-ceo",
       "name": "Call ARKOS CEO Agent",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [
-        1080,
-        500
-      ],
+      "position": [1080, 500],
       "onError": "continueRegularOutput"
     },
     {
       "parameters": {
-        "jsCode": "// Preparar respuesta — con fallback si CEO Agent falla\nlet agentResponse;\ntry {\n  agentResponse = $input.first().json;\n} catch(e) {\n  agentResponse = {};\n}\n\nconst originalMsg = $node['Parse & Validate'].json;\nconst responseText = agentResponse.response || agentResponse.confirmation_message || 'Perdon Jona, tuve un problema procesando tu mensaje. Reintenta en un momento.';\n\nconsole.log('[ARKOS] Respuesta para', originalMsg.from, ':', responseText.substring(0, 80) + '...');\n\nreturn [{ json: {\n  response_text: responseText,\n  response_type: agentResponse.response_type || 'text',\n  from: originalMsg.from,\n  phone_number_id: originalMsg.phone_number_id,\n  display_phone: originalMsg.display_phone\n}}];"
+        "jsCode": "let agentResponse;\ntry { agentResponse = $input.first().json; } catch(e) { agentResponse = {}; }\n\nconst originalMsg = $node['Parse & Validate'].json;\nconst responseText = agentResponse.response || agentResponse.confirmation_message || 'Perdon Jona, tuve un problema procesando tu mensaje. Reintenta en un momento.';\n\nreturn [{ json: {\n  response_text: responseText,\n  response_type: agentResponse.response_type || 'text',\n  from: originalMsg.from,\n  phone_number_id: originalMsg.phone_number_id,\n  display_phone: originalMsg.display_phone\n}}];"
       },
       "id": "prepare-response",
       "name": "Prepare Response",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [
-        1300,
-        500
-      ]
+      "position": [1300, 500]
     },
     {
       "parameters": {
         "method": "POST",
         "url": "=https://graph.facebook.com/v21.0/{{ $json.phone_number_id }}/messages",
         "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Authorization",
-              "value": "=Bearer {{ $env.WHATSAPP_ACCESS_TOKEN }}"
-            },
-            {
-              "name": "Content-Type",
-              "value": "application/json"
-            }
-          ]
-        },
+        "headerParameters": { "parameters": [ { "name": "Authorization", "value": "=Bearer {{ $env.WHATSAPP_ACCESS_TOKEN }}" }, { "name": "Content-Type", "value": "application/json" } ] },
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={\n  \"messaging_product\": \"whatsapp\",\n  \"to\": \"{{ $json.from }}\",\n  \"type\": \"text\",\n  \"text\": {\n    \"body\": {{ JSON.stringify($json.response_text) }}\n  }\n}"
@@ -272,10 +147,7 @@
       "name": "Send WhatsApp",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [
-        1520,
-        500
-      ],
+      "position": [1520, 500],
       "onError": "continueRegularOutput"
     },
     {
@@ -283,22 +155,7 @@
         "method": "POST",
         "url": "={{ $env.SUPABASE_URL }}/rest/v1/arkos_messages",
         "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "apikey",
-              "value": "={{ $env.SUPABASE_SERVICE_ROLE_KEY }}"
-            },
-            {
-              "name": "Authorization",
-              "value": "=Bearer {{ $env.SUPABASE_SERVICE_ROLE_KEY }}"
-            },
-            {
-              "name": "Content-Type",
-              "value": "application/json"
-            }
-          ]
-        },
+        "headerParameters": { "parameters": [ { "name": "apikey", "value": "={{ $env.SUPABASE_SERVICE_ROLE_KEY }}" }, { "name": "Authorization", "value": "=Bearer {{ $env.SUPABASE_SERVICE_ROLE_KEY }}" }, { "name": "Content-Type", "value": "application/json" } ] },
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={\n  \"user_id\": \"{{ $env.OWNER_USER_ID }}\",\n  \"direction\": \"outbound\",\n  \"channel\": \"whatsapp\",\n  \"message_type\": \"text\",\n  \"from_phone\": \"{{ $node['Prepare Response'].json.display_phone }}\",\n  \"to_phone\": \"{{ $node['Prepare Response'].json.from }}\",\n  \"text_content\": {{ JSON.stringify($node['Prepare Response'].json.response_text) }},\n  \"processed\": true\n}"
@@ -307,180 +164,32 @@
       "name": "Save Outbound",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [
-        1740,
-        500
-      ],
+      "position": [1740, 500],
       "onError": "continueRegularOutput"
     },
     {
-      "parameters": {
-        "respondWith": "json",
-        "responseBody": "={ \"status\": \"ok\" }",
-        "options": {
-          "responseCode": 200
-        }
-      },
+      "parameters": { "respondWith": "json", "responseBody": "={ \"status\": \"ok\" }", "options": { "responseCode": 200 } },
       "id": "respond-200",
       "name": "Respond 200",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1,
-      "position": [
-        1960,
-        500
-      ]
+      "position": [1960, 500]
     }
   ],
   "connections": {
-    "WhatsApp Webhook POST": {
-      "main": [
-        [
-          {
-            "node": "Parse & Validate",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "WhatsApp Verify GET": {
-      "main": [
-        [
-          {
-            "node": "Validate Verify Token",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Validate Verify Token": {
-      "main": [
-        [
-          {
-            "node": "Verified?",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Verified?": {
-      "main": [
-        [
-          {
-            "node": "Respond Challenge",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Respond Verify 403",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Parse & Validate": {
-      "main": [
-        [
-          {
-            "node": "Should Skip?",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Should Skip?": {
-      "main": [
-        [
-          {
-            "node": "Respond 200 Skip",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Save Inbound",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Save Inbound": {
-      "main": [
-        [
-          {
-            "node": "Call ARKOS CEO Agent",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Call ARKOS CEO Agent": {
-      "main": [
-        [
-          {
-            "node": "Prepare Response",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Prepare Response": {
-      "main": [
-        [
-          {
-            "node": "Send WhatsApp",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Send WhatsApp": {
-      "main": [
-        [
-          {
-            "node": "Save Outbound",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Save Outbound": {
-      "main": [
-        [
-          {
-            "node": "Respond 200",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    }
+    "WhatsApp Webhook POST": { "main": [[{ "node": "Parse & Validate", "type": "main", "index": 0 }]] },
+    "WhatsApp Verify GET": { "main": [[{ "node": "Validate Verify Token", "type": "main", "index": 0 }]] },
+    "Validate Verify Token": { "main": [[{ "node": "Verified?", "type": "main", "index": 0 }]] },
+    "Verified?": { "main": [[{ "node": "Respond Challenge", "type": "main", "index": 0 }], [{ "node": "Respond Verify 403", "type": "main", "index": 0 }]] },
+    "Parse & Validate": { "main": [[{ "node": "Should Skip?", "type": "main", "index": 0 }]] },
+    "Should Skip?": { "main": [[{ "node": "Respond 200 Skip", "type": "main", "index": 0 }], [{ "node": "Save Inbound", "type": "main", "index": 0 }]] },
+    "Save Inbound": { "main": [[{ "node": "Call ARKOS CEO Agent", "type": "main", "index": 0 }]] },
+    "Call ARKOS CEO Agent": { "main": [[{ "node": "Prepare Response", "type": "main", "index": 0 }]] },
+    "Prepare Response": { "main": [[{ "node": "Send WhatsApp", "type": "main", "index": 0 }]] },
+    "Send WhatsApp": { "main": [[{ "node": "Save Outbound", "type": "main", "index": 0 }]] },
+    "Save Outbound": { "main": [[{ "node": "Respond 200", "type": "main", "index": 0 }]] }
   },
-  "settings": {
-    "executionOrder": "v1"
-  },
-  "tags": [
-    {
-      "name": "arkos"
-    },
-    {
-      "name": "whatsapp"
-    },
-    {
-      "name": "canal"
-    }
-  ],
+  "settings": { "executionOrder": "v1" },
+  "tags": [{ "name": "arkos" }, { "name": "whatsapp" }, { "name": "canal" }],
   "triggerCount": 2
 }
