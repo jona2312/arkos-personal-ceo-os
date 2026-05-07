@@ -2,19 +2,12 @@
   "name": "ARKOS_MEMORY_WRITE",
   "nodes": [
     {
-      "parameters": {
-        "path": "arkos-memory-write",
-        "httpMethod": "POST",
-        "responseMode": "responseNode"
-      },
+      "parameters": { "path": "arkos-memory-write", "httpMethod": "POST", "responseMode": "responseNode" },
       "id": "mw-webhook",
       "name": "Memory Write Webhook",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2,
-      "position": [
-        200,
-        400
-      ],
+      "position": [200, 400],
       "webhookId": "arkos-memory-write"
     },
     {
@@ -23,53 +16,35 @@
           "conditions": [
             {
               "leftValue": "={{ $json.headers['x-arkos-secret'] }}",
-              "rightValue": "Y9D2LFdEVlzcqaLv7C2zn9v4V94RfP9CGuXW7FLC2iyOLSQLoOy-i9m-cdPcMS0Y",
-              "operator": {
-                "type": "string",
-                "operation": "equals"
-              }
+              "rightValue": "={{ $env.ARKOS_INTERNAL_SECRET }}",
+              "operator": { "type": "string", "operation": "equals" }
             }
           ]
         }
       },
       "id": "mw-secret-check",
-      "name": "Validate Secret",
+      "name": "Validate Internal Header",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
-      "position": [
-        400,
-        400
-      ]
+      "position": [400, 400]
     },
     {
-      "parameters": {
-        "respondWith": "json",
-        "responseBody": "={ \"error\": \"Forbidden\" }",
-        "options": {
-          "responseCode": 403
-        }
-      },
+      "parameters": { "respondWith": "json", "responseBody": "={ \"error\": \"Forbidden\" }", "options": { "responseCode": 403 } },
       "id": "mw-403",
       "name": "Respond 403",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1,
-      "position": [
-        600,
-        520
-      ]
+      "position": [600, 520]
     },
     {
       "parameters": {
-        "jsCode": "const input = $input.first().json.body || $input.first().json;\nreturn [{ json: {\n  user_id: input.user_id,\n  item_type: input.item_type || 'note',\n  title: input.title || '',\n  content: input.content || '',\n  department: input.department || 'ceo',\n  status: input.status || 'active',\n  priority: input.priority || 'medium',\n  due_date: input.due_date || null,\n  remind_at: input.remind_at || null,\n  tags: input.tags || [],\n  source: input.source || 'whatsapp'\n}}];"
+        "jsCode": "const input = $input.first().json.body || $input.first().json;\nreturn [{ json: {\n  user_id: input.user_id,\n  item_type: input.item_type || input.memory_type || 'note',\n  title: input.title || (input.content ? input.content.slice(0, 80) : ''),\n  content: input.content || '',\n  department: input.department || input.area || 'ceo',\n  status: input.status || 'active',\n  priority: input.priority || 'medium',\n  due_date: input.due_date || null,\n  remind_at: input.remind_at || null,\n  tags: input.tags || [],\n  source: input.source || 'whatsapp'\n}}];"
       },
       "id": "mw-parse",
       "name": "Parse Item",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [
-        600,
-        300
-      ]
+      "position": [600, 300]
     },
     {
       "parameters": {
@@ -78,22 +53,10 @@
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            {
-              "name": "apikey",
-              "value": "={{ $env.SUPABASE_SERVICE_ROLE_KEY }}"
-            },
-            {
-              "name": "Authorization",
-              "value": "=Bearer {{ $env.SUPABASE_SERVICE_ROLE_KEY }}"
-            },
-            {
-              "name": "Content-Type",
-              "value": "application/json"
-            },
-            {
-              "name": "Prefer",
-              "value": "return=representation"
-            }
+            { "name": "apikey", "value": "={{ $env.SUPABASE_SERVICE_ROLE_KEY }}" },
+            { "name": "Authorization", "value": "=Bearer {{ $env.SUPABASE_SERVICE_ROLE_KEY }}" },
+            { "name": "Content-Type", "value": "application/json" },
+            { "name": "Prefer", "value": "return=representation" }
           ]
         },
         "sendBody": true,
@@ -104,119 +67,33 @@
       "name": "Save to Supabase",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [
-        800,
-        300
-      ]
+      "position": [800, 300]
     },
     {
-      "parameters": {
-        "jsCode": "const saved = $input.first().json;\nreturn [{ json: { success: true, item_id: Array.isArray(saved) ? saved[0]?.id : saved?.id } }];"
-      },
+      "parameters": { "jsCode": "const saved = $input.first().json;\nreturn [{ json: { success: true, item_id: Array.isArray(saved) ? saved[0]?.id : saved?.id } }];" },
       "id": "mw-confirm",
       "name": "Confirm Save",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [
-        1000,
-        300
-      ]
+      "position": [1000, 300]
     },
     {
-      "parameters": {
-        "respondWith": "json",
-        "responseBody": "={{ JSON.stringify($json) }}",
-        "options": {
-          "responseCode": 200
-        }
-      },
+      "parameters": { "respondWith": "json", "responseBody": "={{ JSON.stringify($json) }}", "options": { "responseCode": 200 } },
       "id": "mw-respond-200",
       "name": "Respond 200",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1,
-      "position": [
-        1200,
-        300
-      ]
+      "position": [1200, 300]
     }
   ],
   "connections": {
-    "Memory Write Webhook": {
-      "main": [
-        [
-          {
-            "node": "Validate Secret",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Validate Secret": {
-      "main": [
-        [
-          {
-            "node": "Parse Item",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Respond 403",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Parse Item": {
-      "main": [
-        [
-          {
-            "node": "Save to Supabase",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Save to Supabase": {
-      "main": [
-        [
-          {
-            "node": "Confirm Save",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Confirm Save": {
-      "main": [
-        [
-          {
-            "node": "Respond 200",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    }
+    "Memory Write Webhook": { "main": [[{ "node": "Validate Internal Header", "type": "main", "index": 0 }]] },
+    "Validate Internal Header": { "main": [[{ "node": "Parse Item", "type": "main", "index": 0 }], [{ "node": "Respond 403", "type": "main", "index": 0 }]] },
+    "Parse Item": { "main": [[{ "node": "Save to Supabase", "type": "main", "index": 0 }]] },
+    "Save to Supabase": { "main": [[{ "node": "Confirm Save", "type": "main", "index": 0 }]] },
+    "Confirm Save": { "main": [[{ "node": "Respond 200", "type": "main", "index": 0 }]] }
   },
-  "settings": {
-    "executionOrder": "v1"
-  },
-  "tags": [
-    {
-      "name": "arkos"
-    },
-    {
-      "name": "tool"
-    },
-    {
-      "name": "memoria"
-    }
-  ],
+  "settings": { "executionOrder": "v1" },
+  "tags": [{ "name": "arkos" }, { "name": "tool" }, { "name": "memoria" }],
   "triggerCount": 1
 }
