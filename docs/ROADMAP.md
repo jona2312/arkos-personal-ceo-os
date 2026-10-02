@@ -1,5 +1,12 @@
 # ARKOS Personal CEO OS — Roadmap
 
+# Línea activa: piloto de escritorio
+
+Para el incremento iniciado el 2 de octubre de 2026, ver
+[roadmap del piloto](DESKTOP_PILOT.md#roadmap-de-ejecución).
+Las fases siguientes conservan el plan histórico de n8n/WhatsApp; sus marcas
+no certifican un despliegue verificado ni bloquean la prueba local independiente.
+
 ## Fase 0 — Setup [COMPLETA]
 
 | Tarea | Estado |
