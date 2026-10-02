@@ -30,4 +30,8 @@ n8n-creds/
 # Temp
 tmp/
 .tmp/
+.venv/
+__pycache__/
+*.pyc
+.arkos-state/
 n8n/workflows/deploy/

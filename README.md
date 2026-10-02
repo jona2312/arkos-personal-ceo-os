@@ -1,5 +1,12 @@
 # ARKOS Personal CEO OS
 
+# Piloto de escritorio ARKOS
+
+El nuevo trabajo de escritorio está en [DESKTOP_PILOT.md](docs/DESKTOP_PILOT.md):
+inventario real, componentes seleccionados de GitHub, prueba local, preparación
+para Windows y roadmap. Ejecutar `python -m arkos_pilot doctor` desde este repo.
+Este incremento no demuestra ni modifica el despliegue de los workflows existentes.
+
 > Tu CEO no necesita otro dashboard. Necesita un agente que piense, recuerde y actue.
 
 ARKOS es un sistema operativo ejecutivo basado en agentes con memoria persistente, interfaz por WhatsApp, voz conversacional y aprobacion humana para acciones sensibles.
