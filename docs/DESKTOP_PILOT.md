@@ -1,5 +1,10 @@
 # ARKOS: piloto de escritorio
 
+La siguiente etapa prioriza probar una interfaz existente completa:
+[Hermes Desktop: instalación, voz y aceptación en la PC](HERMES_DESKTOP_TRIAL.md).
+Kokoro y un puente propio no son requisitos para empezar esa prueba. El control
+Python descrito abajo sigue separado del runtime Hermes.
+
 ## Qué existe y qué entrega este incremento
 
 Inventario al 2 de octubre de 2026: ocho workflows n8n, diez migraciones SQL,

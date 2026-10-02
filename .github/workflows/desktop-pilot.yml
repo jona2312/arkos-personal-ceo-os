@@ -23,3 +23,14 @@ jobs:
         if: runner.os == 'Windows'
         shell: pwsh
         run: ./scripts/Start-Arkos.ps1 propose 'Quiero organizar mis tareas'
+      - name: Parse PowerShell scripts and inspect desktop readiness
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          Get-ChildItem scripts/*.ps1 | ForEach-Object {
+            $parseTokens = $null
+            $parseErrors = $null
+            [System.Management.Automation.Language.Parser]::ParseFile($_.FullName, [ref]$parseTokens, [ref]$parseErrors) | Out-Null
+            if ($parseErrors.Count) { throw ($parseErrors | Out-String) }
+          }
+          ./scripts/Get-ArkosDesktopReadiness.ps1
