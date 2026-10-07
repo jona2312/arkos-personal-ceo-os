@@ -1,0 +1,15 @@
+{
+  "kind": "synthetic audio component check; not a human microphone or barge-in test",
+  "tts": {
+    "path": "D:/ARKOS/ArkosTrial/voz-componente.wav",
+    "elapsed_s": 37.382,
+    "duration_s": 3.575873015873016
+  },
+  "stt": {
+    "text": "Hola Jona, soy Arcos, la reunión es el 15 de octubre a las 10.",
+    "elapsed_s": 59.769,
+    "language": "es",
+    "device": "cpu/int8",
+    "model": "small"
+  }
+}

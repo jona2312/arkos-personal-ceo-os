@@ -1,0 +1,43 @@
+{
+  "checked_at": "2026-10-07T15:48:46.1187949Z",
+  "gpu": "NVIDIA GeForce RTX 3090, 24576 MiB, 591.86",
+  "audio_devices": [
+    {
+      "Name": "NVIDIA Virtual Audio Device (Wave Extensible) (WDM)",
+      "Status": "OK"
+    },
+    {
+      "Name": "Dispositivo de High Definition Audio",
+      "Status": "OK"
+    },
+    {
+      "Name": "NVIDIA High Definition Audio",
+      "Status": "OK"
+    }
+  ],
+  "audio_endpoints": [
+    {
+      "Name": "P27FBB-RGGL (NVIDIA High Definition Audio)",
+      "Status": "OK"
+    },
+    {
+      "Name": "TV-monitor (NVIDIA High Definition Audio)",
+      "Status": "OK"
+    },
+    {
+      "Name": "Digital Audio (S/PDIF) (High Definition Audio Device)",
+      "Status": "OK"
+    },
+    {
+      "Name": "SAMSUNG (NVIDIA High Definition Audio)",
+      "Status": "OK"
+    },
+    {
+      "Name": "Microphone (High Definition Audio Device)",
+      "Status": "OK"
+    }
+  ],
+  "hermes_preexisting": false,
+  "ollama_in_path": false,
+  "provider_env_names": []
+}

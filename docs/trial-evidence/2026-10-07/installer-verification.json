@@ -1,0 +1,9 @@
+{
+  "file": "C:\\Users\\Jona\\AppData\\Local\\ArkosPilot\\downloads\\Hermes-Setup.exe",
+  "size": 7946048,
+  "sha256": "cfc818adf831a748c61a407152a03c7a426ebee78f499d20a31fae2b5ac5d827",
+  "signature_status": "Valid",
+  "signer": "CN=Nous Research Inc., O=Nous Research Inc., L=Austin, S=Texas, C=US",
+  "signer_thumbprint": "73319CF939C2073A5066D185EEACDC82797D8C79",
+  "executed": false
+}

@@ -1,0 +1,11 @@
+diff --git a/pm/environments.py b/pm/environments.py
+index 8a685bfc4f..43d88ca027 100644
+--- a/pm/environments.py
++++ b/pm/environments.py
+@@ -457,2 +457,6 @@ def activate_dependencies(project_root: Path) -> None:
+         raise RuntimeError(f"dependency environment has no site-packages: {selected}")
++    # The Windows pilot's managed generations exceed MAX_PATH for generated
++    # SDK module names. Extended paths work without changing OS policies.
++    if os.name == "nt" and not str(selected).startswith("\\\\?\\"):
++        selected = Path("\\\\?\\" + str(selected.absolute()))
+     import site

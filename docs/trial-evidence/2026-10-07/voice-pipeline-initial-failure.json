@@ -1,0 +1,44 @@
+{
+  "kind": "synthetic sequential pipeline; not a human microphone or speaker test",
+  "timestamp_utc": "2026-10-07T17:06:43.882260+00:00",
+  "metric": "input WAV upload start to complete response audio received",
+  "excluded": [
+    "microphone capture",
+    "end-of-speech detection",
+    "native chat orchestration",
+    "tool calls",
+    "first streamed audio",
+    "physical speaker playback"
+  ],
+  "desktop_stt_tts_routes": true,
+  "model": "Qwen3.8-27B-UD-Q4_K_M",
+  "model_thinking": false,
+  "tts": {
+    "provider": "edge",
+    "edge": {
+      "voice": "es-AR-ElenaNeural",
+      "speed": 0.92
+    },
+    "piper": {
+      "voice": "es_AR-daniela-high",
+      "length_scale": 1.12
+    }
+  },
+  "cases": [
+    {
+      "id": "date_set",
+      "input_text": "La reunión de prueba es el quince de octubre a las diez. Confirmá en una frase. No crees un evento.",
+      "input_wav": "D:\\ARKOS\\ArkosTrial\\voice-benchmark\\20261007T170638698893Z\\date_set-input.wav",
+      "transcript": "La reunión de pruebas es el 15 de octubre a las 10. Confirma en una frase. No crees un evento.",
+      "stt_s": 2.654,
+      "status": "failed",
+      "failed_stage": "llm",
+      "error_type": "HTTPError",
+      "elapsed_s": 2.655
+    }
+  ],
+  "human_speech_end_to_first_audible_median_s": null,
+  "completed_count": 0,
+  "expected_count": 5,
+  "medians_s": null
+}

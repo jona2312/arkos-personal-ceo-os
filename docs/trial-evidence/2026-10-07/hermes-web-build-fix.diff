@@ -1,0 +1,15 @@
+diff --git a/web/src/pages/SessionsPage.tsx b/web/src/pages/SessionsPage.tsx
+index bb208fdb5c..b391f1ccb0 100644
+--- a/web/src/pages/SessionsPage.tsx
++++ b/web/src/pages/SessionsPage.tsx
+@@ -49,8 +49,8 @@ import {
+   AUTOMATION_SESSION_SOURCES,
+   NO_MATCHING_SESSION_SOURCE,
+   SOURCE_CONFIG,
+-  SessionFilterCategory,
+-  SourceSelectionsByCategory,
++  type SessionFilterCategory,
++  type SourceSelectionsByCategory,
+   isAutomationSource,
+   sourceBelongsToCategory,
+   sourceLabel,

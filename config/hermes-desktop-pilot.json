@@ -1,0 +1,13 @@
+{
+  "checked_on": "2026-10-02",
+  "website": "https://hermes-agent.nousresearch.com/",
+  "installer_url": "https://hermes-assets.nousresearch.com/Hermes-Setup.exe?build=10c6188de188",
+  "installer_size": 7946048,
+  "installer_sha256": "cfc818adf831a748c61a407152a03c7a426ebee78f499d20a31fae2b5ac5d827",
+  "hash_provenance": "Measured from the official website download; not an upstream published checksum or signature verification.",
+  "installer_kind": "source_bootstrap",
+  "source_reference_tag": "v2026.9.24",
+  "source_reference_commit": "f97608f178d1ffeca59860195ab7da295f7c8e5f",
+  "source_pin_applies_to_installer": false,
+  "profile": "arkos-pilot"
+}
