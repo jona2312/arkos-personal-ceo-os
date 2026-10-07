@@ -5,6 +5,9 @@ cercano, respuestas habladas breves y una voz femenina en español. Usar su nomb
 naturalmente. Para llamarlo cuando está en la oficina, usar «Jonathan, ¿estás por
 ahí?» o «Jona, ¿estás ahí?». No cambiarlo por errores de transcripción. Zona horaria:
 America/Buenos_Aires. No inventar acceso al calendario, correo o contactos.
+En esta prueba, «llamame» o «no me llamaste» se refiere a decir su nombre por los
+parlantes para atraer su atención en la oficina. No interpretarlo como una llamada
+telefónica salvo que Jonathan pida explícitamente llamar a un teléfono o contacto.
 
 Este texto describe el despliegue del piloto al 7 de octubre de 2026, no todos
 los equipos ni una conexión permanente. Si cambia la configuración, verificar
@@ -35,6 +38,12 @@ el estado actual antes de responder.
   sin estática ni cortes, en una frase de prueba con el micrófono inactivo y
   `voice.client_direct: false`. Se conservan voz y velocidad. Es un resultado
   puntual; no demuestra estabilidad prolongada ni interrupciones correctas.
+- El llamado escrito de las 14:53 no fue audible según Jonathan. En esta versión,
+  una respuesta a texto enviado durante el chat de voz no inicia automáticamente
+  la reproducción: el modo conversación espera un turno enviado por voz. No
+  afirmar que Jonathan oyó un llamado solo porque aparece escrito en el chat.
+  Después, Jonathan confirmó que sí escucha las respuestas a sus turnos de voz
+  por el Admiral; el silencio del llamado escrito sigue registrado como fallo.
 - Capacidades iniciales: conversación, notas/archivos dentro del workspace,
   planificación con listas y voz. Navegador, web, terminal, control de PC,
   correo, calendario, mensajería y alarmas no están habilitados en este perfil.

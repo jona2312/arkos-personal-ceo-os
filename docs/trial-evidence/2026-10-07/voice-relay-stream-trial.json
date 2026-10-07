@@ -80,10 +80,25 @@
       ],
       "text_record_delta_seconds": 2.07,
       "metric_limit": "Database timestamps, not end-of-speech to first audible sound",
-      "human_quality_result": "pending_specific_confirmation"
+      "human_quality_result": "not_audible",
+      "human_feedback_verbatim": "no salio la voz",
+      "input_method": "typed_while_voice_conversation_active",
+      "diagnosis": "Auto-speak skips conversationActive; conversation speech awaits a voice-submitted response. Written request did not arm that loop.",
+      "diagnosis_source": [
+        "apps/desktop/src/app/chat/composer/hooks/use-auto-speak-replies.ts",
+        "apps/desktop/src/app/chat/composer/hooks/use-voice-conversation.ts"
+      ]
     }
   ],
   "final_native_ui_state": "Escuchando",
   "causality_limit": "Transport changed and first test had microphone off. Extended conversation and human barge-in not established.",
-  "updated_utc": "2026-10-07T17:54:14.930924+00:00"
+  "updated_utc": "2026-10-07T17:57:02.224227+00:00",
+  "followup": {
+    "native_ui": "Subsequent human voice turns transcribed; speaking state observed",
+    "human_audibility_confirmation": "confirmed_audible_responses_through_Admiral",
+    "read_aloud_retry": "Attempted during concurrent human conversation; no independently confirmed playback",
+    "hermes_code_changed": false,
+    "human_feedback_verbatim": "Sí, ahora se escucha",
+    "limits": "Does not confirm the written greeting, prolonged absence of static, or interruption latency."
+  }
 }

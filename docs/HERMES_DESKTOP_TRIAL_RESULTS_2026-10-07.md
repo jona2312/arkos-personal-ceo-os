@@ -507,8 +507,27 @@ no mide la primera muestra audible y no valida el objetivo conversacional de 3 s
 A pedido de Jonathan se reactivó la conversación de voz y a las **14:53:26** se
 envió «Jona, ¿estás? Quiero que hablemos». El texto completo quedó registrado
 a las **14:53:28** (2,070 s entre registros). La UI volvió a «Escuchando» y quedó
-abierta. La calidad de este segundo llamado con micrófono activo y la estabilidad
-durante una conversación larga quedan pendientes de confirmación específica.
+abierta. **Jonathan confirmó después «no salio la voz»**: este segundo llamado
+falló como reproducción audible. No valida el modo conversación ni debe contarse
+como un saludo hablado exitoso.
+
+La inspección de `use-auto-speak-replies.ts` mostró que la lectura automática
+retorna sin reproducir cuando `conversationActive` es verdadero. Por su parte,
+`use-voice-conversation.ts` abre TTS cuando `awaitingSpokenResponseRef` está activo,
+bandera que se establece al enviar una transcripción. El pedido de las 14:53 se
+envió **por escrito con conversación activa**, por lo que no cumplía esa condición.
+Esto explica el silencio de ese ensayo; no hay evidencia de un nuevo fallo de pago.
+No se modificó el código de Hermes para corregir este comportamiento.
+
+Mientras se revisaba, Hermes recibió por voz «No me llamaste» y «Ah, pensé que me
+ibas a llamar»; mostró «Respuesta hablada» / «Hablando». Confundió «llamarme» con
+telefonía, por lo que se aclaró ese significado en el contexto versionado. Los
+intentos de reproducir el llamado mediante «Leer en voz alta» coincidieron con
+nuevos turnos del usuario: no se los registra como audio confirmado. La escucha
+se mantuvo activa. Jonathan confirmó después **«Sí, ahora se escucha»** al
+preguntarle si oye las respuestas por el Admiral. Esto confirma la salida durante
+la conversación por voz; no confirma el llamado escrito anterior, ausencia de
+estática durante una conversación prolongada ni la latencia de interrupción.
 
 La mejora inicial está confirmada por el usuario, pero no aísla todavía la causa:
 el primer ensayo cambió el transporte y se hizo sin micrófono. No se declara
