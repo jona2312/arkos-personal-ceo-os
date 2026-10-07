@@ -127,6 +127,33 @@ de Hermes puede requerir revisar ese parche.
 
 ## Aplicar el contexto sin perder lo anterior
 
+### Corrección local de voz de Desktop
+
+El piloto incluye `trial-evidence/2026-10-07/hermes-desktop-typed-voice.diff` para
+Hermes `489c1ac298f8ed13ccd688c97e4097f161046c0b`. Corrige respuestas escritas
+que quedaban mudas con la conversación de voz activa, y evita enviar una
+transcripción pendiente que ya fue reemplazada por ese turno. Incluye dos
+regresiones probadas en rojo sobre el código anterior. No resuelve por sí solo
+los finales prematuros del modelo ni acredita fluidez audible.
+
+Para reproducir en una copia de desarrollo de esa versión, comprobar y aplicar
+el parche con `git apply --check` y `git apply`. Desde `apps/desktop`, con las
+dependencias del workspace ya instaladas:
+
+```powershell
+node ../../node_modules/vitest/vitest.mjs run --project ui src/app/chat/composer/hooks/use-voice-conversation.test.tsx src/app/chat/composer/hooks/use-voice-conversation-rearm.test.tsx src/app/chat/composer/hooks/use-voice-conversation-stale-reply.test.tsx src/app/chat/composer/hooks/use-auto-speak-replies.test.tsx src/app/chat/composer/hooks/use-voice-conversation-boundary.test.tsx src/app/chat/composer/hooks/use-voice-conversation-warmup.test.tsx src/app/chat/composer/hooks/use-voice-conversation-meter.test.tsx
+node scripts/build.mjs
+node scripts/run-electron-builder.mjs --dir --publish never --native-deps build/native-deps '-c.directories.output=D:/ARKOS/hermes/desktop-voice-fix-20261007'
+```
+
+El empaquetado usa las dependencias nativas ya preparadas para este equipo.
+Promover la carpeta `win-unpacked` únicamente después de verificar el paquete y
+cerrar Hermes en reposo; conservar la anterior fuera de la ruta activa para
+recuperación. El perfil permanece separado. No es una publicación del producto
+ni un parche confirmado en versiones posteriores de Hermes.
+
+### Contexto del perfil
+
 Usar el Python del entorno propio de Hermes. Previsualizar y luego aplicar:
 
 ```powershell
@@ -166,3 +193,16 @@ extenso y limita la respuesta a 256 tokens; esa condición figura en la evidenci
 
 La aceptación real y sus limitaciones están en
 `HERMES_DESKTOP_TRIAL_RESULTS_2026-10-07.md`.
+
+Para reproducir el final prematuro de texto observado en esta PC, con el modelo
+en reposo y esa sesión todavía disponible:
+
+```powershell
+& $hermesPython scripts/Replay-HermesLocalGeneration.py --hermes-source D:/ARKOS/hermes/hermes-agent --profile-home D:/ARKOS/hermes/profiles/arkos-pilot --session-id 20261007_141722_5932c9 --before-message-id 275 --seed 42 --reasoning none --report <REPORTE_JSON>
+```
+
+Lee la base en modo de solo lectura, reconstruye el historial y hace una única
+solicitud SSE al modelo local autenticado. Describe las herramientas del piloto
+sin ejecutarlas. El reporte guarda tiempos, cantidades y un hash de la respuesta;
+no guarda historial, texto generado, razonamiento ni credenciales. Es diagnóstico
+de generación, no prueba de voz ni garantía de reproducibilidad entre versiones.

@@ -559,6 +559,65 @@ el llamado escrito durante conversación de voz; después medir cinco latencias
 humanas e interrupciones. No sumar conexiones externas antes de estabilizar este
 flujo. Evidencia de cierre incorporada a `voice-relay-stream-trial.json`.
 
+## Continuación autorizada: diagnóstico y corrección del llamado escrito
+
+Jonathan pidió seguir trabajando y solicitar una prueba humana cuando hiciera
+falta. La inspección de `agent.log` confirma que los turnos persistidos como
+`J`, `Tienes` y `T` terminaron como `text_response(finish_reason=stop)`, con
+2, 3 y 2 tokens de salida respectivamente. No tienen una interrupción registrada;
+una interrupción real anterior sí figura por separado. La causa del final
+prematuro del modelo sigue abierta.
+
+Se hicieron 37 solicitudes de diagnóstico exclusivamente al modelo local:
+controles nuevos y reconstrucciones del historial largo, con y sin herramientas
+y con distintos ajustes de razonamiento. No ejecutaron herramientas ni TTS,
+ni consumieron créditos de ElevenLabs. Las primeras 15 no reprodujeron el fallo;
+la reproducción SSE siguiente obtuvo `T`, 2 tokens, final `stop`. Fijando semilla
+42 y repitiendo el historial anterior al mensaje 275 se obtuvo `Tienes`, 3 tokens,
+final `stop`, de forma repetida. El síntoma queda reproducido fuera de Desktop,
+del micrófono y del proveedor de voz.
+
+Controles: desactivar caché, cambiar el muestreo del backend, usar directamente
+`enable_thinking: false` o desactivar MTP no eliminaron ese final prematuro.
+Sin herramientas también hubo una frase cortada en `tele`. MTP se desactivó solo
+durante tres solicitudes; se comprobó `--spec-type none` en el proceso y se
+restauró el preset original byte por byte. La configuración permanente del
+modelo no se modificó.
+
+Con razonamiento `low`, el mismo caso produjo una respuesta completa de 451
+caracteres, pero tardó 38,150 s hasta el primer texto, incluyendo recálculo del
+historial. Limitar el razonamiento a 64 tokens dio llamadas a herramientas;
+no acredita una conversación completa ni una solución de baja latencia. Una
+prueba anterior con `low` agotó el límite deliberado de 512 tokens del ensayo;
+ese `finish_reason=length` no es el fallo original. La reconstrucción no equivale
+a una captura idéntica de la solicitud original. No se atribuye todavía la causa
+exacta al modelo, cuantización, plantilla o implementación del servidor.
+
+La evidencia sanitizada se conserva en `voice-continuity-debug.json`. El historial
+completo y las credenciales no se exportan. Se consultaron el
+[código del servidor llama.cpp](https://github.com/ggml-org/llama.cpp/blob/master/tools/server/server-schema.cpp)
+y la [ficha oficial de Qwen3.8](https://huggingface.co/Qwen/Qwen3.8-27B)
+para diseñar controles de parámetros; las conclusiones anteriores proceden de
+las ejecuciones locales, no de asumir que esos parámetros solucionarían el caso.
+
+Se reprodujo y corrigió otro fallo concreto de Desktop: con conversación de voz
+activa, un mensaje escrito iniciaba el agente pero el bucle seguía escuchando;
+la lectura automática cedía a ese bucle y ninguno reproducía la respuesta.
+El parche toma el nuevo turno, cancela la captura anterior y descarta cualquier
+transcripción que llegara tarde; reproduce mediante el flujo de voz existente
+y vuelve a escuchar. Conserva el control de lectura e interrupciones.
+
+Parche reproducible sobre Hermes `489c1ac298f8ed13ccd688c97e4097f161046c0b`:
+`trial-evidence/2026-10-07/hermes-desktop-typed-voice.diff`. Dos regresiones fallan
+en el código anterior; 36 pruebas de voz pasan con la corrección. TypeScript y
+compilación de Desktop pasan. ESLint: cero errores; permanece una advertencia
+anterior de dependencia del efecto que conduce el bucle.
+
+Se empaquetó e instaló la aplicación corregida en la misma ruta del piloto,
+conservando la carpeta anterior como copia de recuperación. No se cambiaron
+claves, proveedor, voz Luxuria, velocidad, permisos ni otros proyectos. La
+validación humana del parche y la fluidez sostenida siguen pendientes.
+
 ## Estado de aceptación actualizado
 
 | Caso | Estado actual | Evidencia |
@@ -577,7 +636,8 @@ flujo. Evidencia de cierre incorporada a `voice-relay-stream-trial.json`.
 | Cinco latencias y mediana | Benchmark sintético: 5,548 s; humana pendiente | Hasta audio completo; no fin de habla a primer audio audible |
 | Tareas cotidianas del agente | Diez pedidos ejecutados y revisados | Cuatro archivos comprobados; corrección de fecha retenida |
 | ElevenLabs | Generación y saludo automático confirmados después del reintento | MP3 real; Jonathan confirmó audio por Admiral; bloqueo inicial conservado en evidencia |
-| Estática y cortes | Prueba breve limpia; fluidez sostenida fallida/no resuelta | Jonathan reporta trabas posteriores; respuestas truncadas también en la base local; voz detenida por hoy |
+| Llamado escrito con conversación de voz activa | Corrección local instalada; escucha humana pendiente | Dos regresiones reproducidas; 36 pruebas de voz pasan |
+| Estática y cortes | Prueba breve limpia; fluidez sostenida fallida/no resuelta | Finales prematuros también en generación local; investigación retomada por pedido de Jonathan |
 
 ## Evidencia
 

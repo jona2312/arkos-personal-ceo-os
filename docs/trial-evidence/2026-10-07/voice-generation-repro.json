@@ -1,0 +1,24 @@
+{
+  "timestamp_utc": "2026-10-07T18:52:56.991816+00:00",
+  "kind": "one reconstructed local SSE request; no tool execution or audio",
+  "session_id": "20261007_141722_5932c9",
+  "before_message_id": 275,
+  "history_messages": 128,
+  "seed": 42,
+  "reasoning": "none",
+  "temperature": 1,
+  "max_tokens": 1024,
+  "finish_reason": "stop",
+  "first_text_s": 0.567,
+  "total_s": 0.64,
+  "response_characters": 6,
+  "response_sha256": "de269f5f73b7c92e0f1205b097f271de77e07373b42ee0aa6821919090c98a0d",
+  "tool_call_count": 0,
+  "usage": {
+    "prompt_tokens": 26548,
+    "completion_tokens": 3,
+    "total_tokens": 26551
+  },
+  "human_review_required": true,
+  "history_exported": false
+}

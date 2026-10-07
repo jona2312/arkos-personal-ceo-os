@@ -1,0 +1,113 @@
+diff --git a/apps/desktop/src/app/chat/composer/hooks/use-voice-conversation.test.tsx b/apps/desktop/src/app/chat/composer/hooks/use-voice-conversation.test.tsx
+index 31ef5a149d..8c1e2ee9ae 100644
+--- a/apps/desktop/src/app/chat/composer/hooks/use-voice-conversation.test.tsx
++++ b/apps/desktop/src/app/chat/composer/hooks/use-voice-conversation.test.tsx
+@@ -158,7 +158,62 @@ describe('useVoiceConversation full-duplex barge-in', () => {
+     micHandle.stop.mockResolvedValue(null)
+   })
+
+-  afterEach(cleanup)
++  afterEach(() => {
++    cleanup()
++    $autoSpeakReplies.set(false)
++  })
++
++  it('speaks a typed turn while conversation listening is active, then resumes listening', async () => {
++    $autoSpeakReplies.set(true)
++    let reply: { id: string; pending: boolean; text: string } | null = null
++    const { hook, onBusyChange, onSubmit } = renderConversation({ pendingResponse: () => reply })
++
++    await act(async () => {
++      await hook.result.current.start()
++    })
++    await waitFor(() => expect(hook.result.current.status).toBe('listening'))
++    act(() => onBusyChange.current(true))
++    await waitFor(() => expect(hook.result.current.status).toBe('thinking'))
++    expect(micHandle.cancel).toHaveBeenCalled()
++    expect(monitorCalls.length).toBeGreaterThan(0)
++
++    reply = { id: 'typed-reply', pending: false, text: 'Jona, estoy lista para conversar.' }
++    act(() => onBusyChange.current(false))
++    await waitFor(() =>
++      expect(playSpeechTextMock).toHaveBeenCalledWith(
++        reply!.text,
++        expect.objectContaining({ source: 'voice-conversation' })
++      )
++    )
++    await waitFor(() => expect(hook.result.current.status).toBe('listening'))
++    expect(playSpeechTextMock).toHaveBeenCalledTimes(1)
++    expect(onSubmit).not.toHaveBeenCalled()
++  })
++
++  it('drops a pending microphone transcript when a typed turn takes over', async () => {
++    const { hook, onBusyChange, onSubmit, onTranscribeAudio } = renderConversation()
++    let finishTranscript!: (text: string) => void
++    onTranscribeAudio.mockImplementationOnce(
++      () =>
++        new Promise(resolve => {
++          finishTranscript = resolve
++        })
++    )
++    await act(async () => {
++      await hook.result.current.start()
++    })
++    micHandle.stop.mockResolvedValueOnce({ audio: new Blob(['q']), durationMs: 900, heardSpeech: true })
++    await act(async () => {
++      hook.result.current.stopTurn()
++    })
++    await waitFor(() => expect(onTranscribeAudio).toHaveBeenCalled())
++    act(() => onBusyChange.current(true))
++    await act(async () => {
++      finishTranscript('an obsolete microphone take')
++    })
++    expect(onSubmit).not.toHaveBeenCalled()
++    expect(hook.result.current.status).toBe('thinking')
++  })
+
+   it('arms the barge monitor during generation (before any reply audio exists)', async () => {
+     const { hook } = renderConversation()
+diff --git a/apps/desktop/src/app/chat/composer/hooks/use-voice-conversation.ts b/apps/desktop/src/app/chat/composer/hooks/use-voice-conversation.ts
+index 9e962d9729..5394aa1c68 100644
+--- a/apps/desktop/src/app/chat/composer/hooks/use-voice-conversation.ts
++++ b/apps/desktop/src/app/chat/composer/hooks/use-voice-conversation.ts
+@@ -126,6 +126,7 @@ export function useVoiceConversation({
+   const enabledRef = useRef(enabled)
+   const mutedRef = useRef(muted)
+   const busyRef = useRef(busy)
++  const previousBusyRef = useRef(busy)
+   const statusRef = useRef<ConversationStatus>('idle')
+   const wasEnabledRef = useRef(enabled)
+   const onStopWordRef = useRef(onStopWord)
+@@ -1054,7 +1055,31 @@ export function useVoiceConversation({
+     return undefined
+   }, [enabled, muted, status])
+
+-  // Drive the loop: when a voice-submitted reply appears, open a live speech
++  // A typed turn also belongs to this conversation. Auto-speak yields to this
++  // loop while it is active, so leaving it in listening would silently skip
++  // that reply. Replacing the capture identity fences any STT still in flight.
++  // eslint-disable-next-line no-restricted-syntax -- hand off a newly busy turn to the conversation loop
++  useEffect(() => {
++    const startingTurn = busy && !previousBusyRef.current
++    previousBusyRef.current = busy
++    const conversation = conversationRef.current
++
++    if (!startingTurn || !enabled || muted || !conversation || awaitingSpokenResponseRef.current) {
++      return
++    }
++
++    conversationRef.current = { ...conversation }
++    clearTurnTimeout()
++    handle.cancel()
++    stopVoicePlayback()
++    dropSpeechSession()
++    turnClosingRef.current = false
++    pendingStartRef.current = false
++    awaitingSpokenResponseRef.current = true
++    setStatus('thinking')
++  }, [busy, enabled, handle, muted])
++
++  // Drive the loop: when a submitted reply appears, open a live speech
+   // session (which feeds itself from then on). Otherwise start listening when
+   // idle between turns.
+   // eslint-disable-next-line no-restricted-syntax -- legitimate non-atom ref write (see eslint rule comment)

@@ -38,17 +38,24 @@ el estado actual antes de responder.
   sin estática ni cortes, en una frase de prueba con el micrófono inactivo y
   `voice.client_direct: false`. Se conservan voz y velocidad. Es un resultado
   puntual; no demuestra estabilidad prolongada ni interrupciones correctas.
-- El llamado escrito de las 14:53 no fue audible según Jonathan. En esta versión,
-  una respuesta a texto enviado durante el chat de voz no inicia automáticamente
-  la reproducción: el modo conversación espera un turno enviado por voz. No
-  afirmar que Jonathan oyó un llamado solo porque aparece escrito en el chat.
-  Después, Jonathan confirmó que sí escucha las respuestas a sus turnos de voz
-  por el Admiral; el silencio del llamado escrito sigue registrado como fallo.
+- El llamado escrito de las 14:53 no fue audible según Jonathan. Se encontró que
+  el modo conversación esperaba solamente turnos enviados por voz. El 7 de
+  octubre se instaló una corrección local para leer también respuestas a texto
+  durante la conversación activa; pasó 36 pruebas automáticas. La comprobación
+  humana de esa corrección por el Admiral todavía está pendiente. No afirmar que
+  Jonathan oyó un llamado solo porque aparece escrito en el chat.
 - Cierre de voz por hoy (7 de octubre, después de las 15:00): Jonathan reportó
   trabas frecuentes. Hay respuestas incompletas también en el texto guardado,
   incluso «J» y «T». La fluidez sigue sin resolver; no atribuirla únicamente a
   ElevenLabs ni presentar la prueba breve limpia como solución definitiva.
   Conversación de voz desactivada, aplicación abierta y voz conservada.
+- Jonathan pidió continuar la investigación. Los registros de los turnos «J»,
+  «Tienes» y «T» muestran finalización normal con muy pocos tokens, sin una
+  interrupción registrada en esos turnos. Las repeticiones locales posteriores
+  reprodujeron «T» y «Tienes» con final normal, sin micrófono ni TTS. Desactivar
+  caché o aceleración MTP no lo corrigió; se restauró la configuración original.
+  El razonamiento activado cambió la salida pero añadió demora; todavía no es
+  una solución aceptada. No declararlo resuelto ni culpar a la voz.
 - Capacidades iniciales: conversación, notas/archivos dentro del workspace,
   planificación con listas y voz. Navegador, web, terminal, control de PC,
   correo, calendario, mensajería y alarmas no están habilitados en este perfil.
