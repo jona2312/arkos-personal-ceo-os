@@ -55,7 +55,9 @@ class ContextSyncTests(unittest.TestCase):
             self.assertEqual(result.returncode, 0, result.stderr)
             report = json.loads(result.stdout)
             self.assertEqual(Path(report['backup']).read_bytes(), original)
-            self.assertIn(workspace.as_posix(), (profile / 'SOUL.md').read_text(encoding='utf-8'))
+            # Windows CI may return an 8.3 TEMP alias (RUNNER~1); the sync
+            # command deliberately writes the canonical resolved directory.
+            self.assertIn(workspace.resolve().as_posix(), (profile / 'SOUL.md').read_text(encoding='utf-8'))
             second = self.run_sync(profile, workspace, True)
             self.assertFalse(json.loads(second.stdout)['changed'])
             self.assertEqual(len(list(profile.glob('SOUL.before-*.md'))), 1)
