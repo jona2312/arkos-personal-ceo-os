@@ -1,0 +1,33 @@
+{
+  "kind": "single authorized Hermes TTS tool call; not Desktop auto-reply",
+  "timestamp_utc": "2026-10-07T17:43:58.202782+00:00",
+  "voice_id": "i7QkcKkwN61Pz8KU5OdX",
+  "model_id": "eleven_flash_v2_5",
+  "key_source": "private profile .env",
+  "default_provider": "elevenlabs",
+  "generation_calls_requested": 1,
+  "text": "Jonathan, ¿estás por ahí?",
+  "speaker_audibility": "Component MP3 not played; native Desktop greeting independently confirmed by Jonathan.",
+  "voice_metadata_http_status": 200,
+  "voice_name": "luxuria",
+  "voice_category": "professional",
+  "usage_read_http_status": 401,
+  "actual_provider": "elevenlabs",
+  "generation_s": 1.933,
+  "status": "audio_generated",
+  "audio": "D:\\ARKOS\\ArkosTrial\\elevenlabs-trial-20261007T174358909006Z.mp3",
+  "bytes": 32226,
+  "sha256": "0ceb1b63694ce2fb803baf65e045e0a43fa9980560d03d616bcd122b82da1acb",
+  "profile_config_unchanged_during_test": true,
+  "desktop_verification": {
+    "session_id": "20261007_141722_5932c9",
+    "response_local_time": "2026-10-07 14:43:44 America/Buenos_Aires",
+    "response_text": "Jonathan, ¿estás por ahí?",
+    "text_turn_s": 13.8,
+    "manual_read_aloud_clicked": false,
+    "human_confirmation": "Sí, lo escuché",
+    "output_device_confirmed": "Admiral TV speakers over HDMI",
+    "voice_conversation_ui_state": "Escuchando",
+    "subsequent_user_turn": "Sí, estoy por acá."
+  }
+}

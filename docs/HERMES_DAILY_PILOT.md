@@ -4,8 +4,10 @@ La personalidad versionada está en `prompts/arkos_desktop_soul.md`; el contexto
 de este despliegue, en `prompts/arkos_pilot_runtime_context.md`. La instalación
 de Jonathan conserva su perfil `arkos-pilot`, STT local y modelo Qwen local
 reemplazable. Elena/Edge es la base gratuita preparada. La prueba posterior de
-ElevenLabs quedó seleccionada por pedido de Jonathan, pero su API devolvió
-`payment_issue` y no produjo audio. No hay un router multiagente conectado.
+ElevenLabs quedó seleccionada por pedido de Jonathan. Su API inicialmente
+devolvió `payment_issue`; después de que Jonathan informó haber resuelto el
+pago, generó audio real y él confirmó el saludo automático por el Admiral.
+No hay un router multiagente conectado.
 
 `config/hermes-daily-tasks.json` contiene los comandos de prueba y sus resultados
 esperados. Es un catálogo de pruebas, no un ejecutor que habilita herramientas.

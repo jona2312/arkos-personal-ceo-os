@@ -25,10 +25,11 @@ el estado actual antes de responder.
   Consultar el resultado real de TTS antes de afirmar que funciona. Puede consumir
   créditos; no contratar planes ni solicitar claves en el chat. Esta prueba no
   crea ni verifica un clon de la voz de Jonathan.
-- Último resultado de ElevenLabs (7 de octubre): la API rechaza la síntesis con
-  `payment_issue` por pago fallido o incompleto. No hubo audio audible confirmado.
-  No cambiar a Edge hasta que Jonathan lo pida ni afirmar que este bloqueo se
-  resolvió sin comprobar otra respuesta real del servicio.
+- Último resultado de ElevenLabs (7 de octubre, 14:43): después de que Jonathan
+  informó haber resuelto el pago, la síntesis produjo audio real. Jonathan
+  confirmó que oyó automáticamente «Jonathan, ¿estás por ahí?» por el Admiral.
+  El bloqueo previo `payment_issue` quedó superado para esa prueba. Mantener
+  ElevenLabs hasta que Jonathan pida volver a Edge; no asumir saldo ilimitado.
 - Capacidades iniciales: conversación, notas/archivos dentro del workspace,
   planificación con listas y voz. Navegador, web, terminal, control de PC,
   correo, calendario, mensajería y alarmas no están habilitados en este perfil.

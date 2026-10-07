@@ -442,6 +442,40 @@ la sintaxis de los cuatro scripts nuevos de ejecución/configuración y se revis
 que los archivos a publicar no contienen la clave proporcionada ni patrones de
 tokens de proveedores; los JSON se parsearon correctamente.
 
+## Reintento de ElevenLabs después del aviso de Jonathan
+
+Jonathan informó «listo todo pago» y se repitió el saludo desde el chat nativo,
+manteniendo la voz seleccionada. Hermes respondió «Jonathan, ¿estás por ahí?»
+a las 14:43:44; el turno de texto duró 13,8 s. Jonathan confirmó explícitamente
+que lo escuchó **automáticamente por los parlantes del Admiral**. No se pulsó
+«Leer en voz alta» para este saludo. Después, el chat recibió «Sí, estoy por acá»
+y la UI mostraba conversación de voz activa, en estado «Escuchando».
+
+Una muestra adicional breve usando la herramienta real de Hermes confirmó
+`provider: elevenlabs`, modelo `eleven_flash_v2_5`, voz autorizada y MP3 de
+32.226 bytes, en **1,933 s de síntesis completa**. Archivo:
+`D:/ARKOS/ArkosTrial/elevenlabs-trial-20261007T174358909006Z.mp3`.
+Hash y resultado: `elevenlabs-after-payment.json`. Esta métrica no incluye
+razonamiento, micrófono ni inicio audible; no es latencia conversacional.
+La consulta de consumo sigue devolviendo HTTP 401: no se verificó consumo ni
+saldo. Codex no efectuó pagos ni cambió la configuración durante el reintento.
+
+El fallo `payment_issue` queda como antecedente; la generación y reproducción
+automática ya están confirmadas para esta prueba. ElevenLabs queda activo hasta
+que Jonathan solicite cambiarlo. La app permanece abierta para la conversación.
+
+CI detectó además una suposición del test sobre la ruta temporal de Windows:
+`RUNNER~1` y `runneradmin` resuelven al mismo directorio. Se corrigió la comparación
+para usar la ruta canónica, coherente con el script. Las cinco pruebas específicas
+pasaron localmente; las cuatro combinaciones Windows/Linux y Python 3.11/3.12
+pasaron en CI para `705860c`. La prueba de video se omite donde falta FFmpeg;
+su ejecución local con el binario privado ya está registrada arriba.
+
+Se actualizó la memoria de voz mediante MemoryStore, conservando dos entradas
+y un backup privado del USER anterior. El SOUL posterior a la confirmación tiene
+SHA-256 `0bf80058cf8fdcf008298c6cff391afadec00e01d3b89d70d58411557ed1f374`.
+No se reinició ni interrumpió la conversación que Jonathan ya tenía activa.
+
 ## Estado de aceptación actualizado
 
 | Caso | Estado actual | Evidencia |
@@ -459,7 +493,7 @@ tokens de proveedores; los JSON se parsearon correctamente.
 | Permisos fuera del workspace | Escritura técnica bloqueada y borrado rechazado | file-guard.json; archivo externo conserva hash; sin sandbox de lecturas |
 | Cinco latencias y mediana | Benchmark sintético: 5,548 s; humana pendiente | Hasta audio completo; no fin de habla a primer audio audible |
 | Tareas cotidianas del agente | Diez pedidos ejecutados y revisados | Cuatro archivos comprobados; corrección de fecha retenida |
-| ElevenLabs | Configurado, bloqueado por facturación del proveedor | API real HTTP 401 payment_issue; no audio de ElevenLabs confirmado |
+| ElevenLabs | Generación y saludo automático confirmados después del reintento | MP3 real; Jonathan confirmó audio por Admiral; bloqueo inicial conservado en evidencia |
 
 ## Evidencia
 
