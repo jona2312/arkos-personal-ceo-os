@@ -535,6 +535,30 @@ resuelta definitivamente la estática ni verificada una interrupción humana.
 Evidencia: `voice-relay-stream-trial.json`. El contexto versionado identifica
 Luxuria y este resultado puntual para evitar volver a confundirla con Edge.
 
+## Cierre de la prueba de voz por hoy: fluidez no resuelta
+
+Después de confirmar audio audible, Jonathan informó que Hermes «se traba mucho
+al hablar» y propuso frenar la voz por hoy. Se revisó el chat y se confirmó en la
+base local, en modo de solo lectura, que varias respuestas ya están incompletas
+**en el texto persistido**: a las 14:59:27 aparece `J`, a las 14:59:45 `Tienes` y
+a las 15:00:10 `T`. Dos respuestas anteriores terminan en `Com` y `Guard`.
+Por tanto, no corresponde atribuir todos los cortes al proveedor TTS ni declarar
+que cambiar el transporte resolvió la conversación. La causa de esos finales
+prematuros todavía no se determinó; falta distinguir generación, cancelación del
+turno y detección de interrupciones/eco.
+
+Al revisar la ventana, la conversación de voz **ya estaba desactivada**: el botón
+mostraba «Iniciar conversación de voz» y no había reproducción activa. No se
+reactivó ni se enviaron más pruebas de síntesis. Hermes queda abierto, con Luxuria,
+velocidad y configuración conservadas. La prueba breve limpia de las 14:52 sigue
+siendo un resultado puntual; la fluidez sostenida queda **fallida/no resuelta**.
+
+Para retomar: correlacionar finales de generación y cancelaciones con eventos del
+micrófono; repetir una misma respuesta con escucha apagada y activada; corregir
+el llamado escrito durante conversación de voz; después medir cinco latencias
+humanas e interrupciones. No sumar conexiones externas antes de estabilizar este
+flujo. Evidencia de cierre incorporada a `voice-relay-stream-trial.json`.
+
 ## Estado de aceptación actualizado
 
 | Caso | Estado actual | Evidencia |
@@ -553,7 +577,7 @@ Luxuria y este resultado puntual para evitar volver a confundirla con Edge.
 | Cinco latencias y mediana | Benchmark sintético: 5,548 s; humana pendiente | Hasta audio completo; no fin de habla a primer audio audible |
 | Tareas cotidianas del agente | Diez pedidos ejecutados y revisados | Cuatro archivos comprobados; corrección de fecha retenida |
 | ElevenLabs | Generación y saludo automático confirmados después del reintento | MP3 real; Jonathan confirmó audio por Admiral; bloqueo inicial conservado en evidencia |
-| Estática y cortes | Primera prueba limpia confirmada; conversación prolongada pendiente | Transporte relay, micrófono inactivo en la prueba de las 14:52; después se reactivó la escucha |
+| Estática y cortes | Prueba breve limpia; fluidez sostenida fallida/no resuelta | Jonathan reporta trabas posteriores; respuestas truncadas también en la base local; voz detenida por hoy |
 
 ## Evidencia
 

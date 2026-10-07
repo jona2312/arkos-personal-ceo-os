@@ -90,9 +90,9 @@
       ]
     }
   ],
-  "final_native_ui_state": "Escuchando",
+  "final_native_ui_state": "Voice conversation inactive; app open",
   "causality_limit": "Transport changed and first test had microphone off. Extended conversation and human barge-in not established.",
-  "updated_utc": "2026-10-07T17:57:02.224227+00:00",
+  "updated_utc": "2026-10-07T18:01:45.620933+00:00",
   "followup": {
     "native_ui": "Subsequent human voice turns transcribed; speaking state observed",
     "human_audibility_confirmation": "confirmed_audible_responses_through_Admiral",
@@ -100,5 +100,55 @@
     "hermes_code_changed": false,
     "human_feedback_verbatim": "Sí, ahora se escucha",
     "limits": "Does not confirm the written greeting, prolonged absence of static, or interruption latency."
+  },
+  "session_closeout": {
+    "observed_at_utc": "2026-10-07T18:01:45.620895+00:00",
+    "user_feedback": "se traba mucho al hablar ahora",
+    "decision": "stop voice trial for today",
+    "native_ui_observed": "Iniciar conversacion de voz; no playback active",
+    "voice_conversation_was_already_inactive": true,
+    "app_left_open": true,
+    "tts_configuration_preserved": true,
+    "additional_synthesis_tests": 0,
+    "sustained_fluency": "failed_unresolved",
+    "persisted_assistant_reply_samples": [
+      {
+        "id": 251,
+        "timestamp_utc": "2026-10-07T17:58:05.458869+00:00",
+        "characters": 223,
+        "last_characters": " a cada socio o persona.\n2. **Guard"
+      },
+      {
+        "id": 267,
+        "timestamp_utc": "2026-10-07T17:59:05.071739+00:00",
+        "characters": 111,
+        "last_characters": " (Twilio) que me permite:\n\n1. **Com"
+      },
+      {
+        "id": 273,
+        "timestamp_utc": "2026-10-07T17:59:27.562925+00:00",
+        "characters": 1,
+        "last_characters": "J"
+      },
+      {
+        "id": 275,
+        "timestamp_utc": "2026-10-07T17:59:45.171159+00:00",
+        "characters": 6,
+        "last_characters": "Tienes"
+      },
+      {
+        "id": 289,
+        "timestamp_utc": "2026-10-07T18:00:10.318895+00:00",
+        "characters": 1,
+        "last_characters": "T"
+      }
+    ],
+    "cause": "undetermined; incomplete persisted text means the issue is not established as solely TTS audio quality",
+    "next_checks": [
+      "Correlate generation completion and cancellation with microphone events",
+      "Compare identical response with microphone off/on",
+      "Handle written greeting while voice conversation is active",
+      "Measure five human first-audio latencies and audible interruptions"
+    ]
   }
 }

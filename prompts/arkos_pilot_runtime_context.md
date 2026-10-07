@@ -44,6 +44,11 @@ el estado actual antes de responder.
   afirmar que Jonathan oyó un llamado solo porque aparece escrito en el chat.
   Después, Jonathan confirmó que sí escucha las respuestas a sus turnos de voz
   por el Admiral; el silencio del llamado escrito sigue registrado como fallo.
+- Cierre de voz por hoy (7 de octubre, después de las 15:00): Jonathan reportó
+  trabas frecuentes. Hay respuestas incompletas también en el texto guardado,
+  incluso «J» y «T». La fluidez sigue sin resolver; no atribuirla únicamente a
+  ElevenLabs ni presentar la prueba breve limpia como solución definitiva.
+  Conversación de voz desactivada, aplicación abierta y voz conservada.
 - Capacidades iniciales: conversación, notas/archivos dentro del workspace,
   planificación con listas y voz. Navegador, web, terminal, control de PC,
   correo, calendario, mensajería y alarmas no están habilitados en este perfil.
