@@ -1,0 +1,17 @@
+{
+  "checked_at": "2026-10-07T15:53:49.2317646Z",
+  "user_requested_drive": "Samsung 2 TB",
+  "disk_number": 1,
+  "model": "Samsung SSD 980 PRO with Heatsink 2TB",
+  "bus_type": "NVMe",
+  "drive": "D:",
+  "filesystem": "NTFS",
+  "runtime_root": "D:/ARKOS",
+  "hermes_home": "D:/ARKOS/hermes",
+  "source": "D:/ARKOS/hermes/hermes-agent",
+  "arkos_repository": "D:/ARKOS/repos/arkos-personal-ceo-os",
+  "workspace": "D:/ARKOS/ArkosTrial",
+  "python_install_dir": "D:/ARKOS/python",
+  "uv_cache_dir": "D:/ARKOS/cache/uv",
+  "note": "Internal NVMe, not USB/removable. Placement does not isolate host access. Cross-volume Move-Item left source remnants; robocopy completed and destination git status is clean."
+}

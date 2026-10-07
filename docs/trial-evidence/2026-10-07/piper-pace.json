@@ -1,0 +1,17 @@
+{
+  "kind": "synthetic component duration check; human quality not yet confirmed",
+  "results": [
+    {
+      "scale": 1.0,
+      "path": "D:/ARKOS/ArkosTrial/voz-ritmo-1.0.wav",
+      "duration_seconds": 4.330521541950113,
+      "generation_seconds": 2.9440457999589853
+    },
+    {
+      "scale": 1.12,
+      "path": "D:/ARKOS/ArkosTrial/voz-ritmo-1.12.wav",
+      "duration_seconds": 4.5859410430839,
+      "generation_seconds": 0.6549403999815695
+    }
+  ]
+}

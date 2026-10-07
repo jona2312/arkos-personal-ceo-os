@@ -1,0 +1,10 @@
+{
+  "upstream_commit": "489c1ac298f8ed13ccd688c97e4097f161046c0b",
+  "script_sha256": "e8b0e5d378d005a733e2750af2727f0bba86378ac9bdb79fc45d06dfe7f36c97",
+  "method": "official source installer after GUI bootstrap prerequisites failure",
+  "skip_browser": true,
+  "skip_computer_use": true,
+  "non_interactive": true,
+  "initial_source_failure": "git checkout failed: Filename too long in website/i18n; interrupted the automatic retry",
+  "retry_config": "core.longpaths=true via process-only GIT_CONFIG_COUNT/KEY_0/VALUE_0; no global git configuration changed"
+}

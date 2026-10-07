@@ -1,0 +1,16 @@
+{
+  "profile": "arkos-pilot",
+  "home": "D:/ARKOS/hermes/profiles/arkos-pilot",
+  "user_memory_path": "D:/ARKOS/hermes/profiles/arkos-pilot/memories/USER.md",
+  "user_memory_sha256": "017F4B6A0EBFA5B2925B5D6268A090F07AE18485C2C1196616BC1FF13AE956EB",
+  "auto_speak_enabled_ui": true,
+  "auto_speak_audible_user_confirmed": true,
+  "output": "Admiral via HDMI; default TV-monitor NVIDIA HD Audio",
+  "name_recall_new_session": "20261007_133900_301ac1",
+  "name_recall_response": "Te llamás Jona y sos el creador y operador de ARKOS.",
+  "paid_api_used": false,
+  "elevenlabs_configured": false,
+  "wake_clap_implemented": false,
+  "piper_length_scale": 1.12,
+  "pace_human_feedback": "Ahora es más cómoda"
+}

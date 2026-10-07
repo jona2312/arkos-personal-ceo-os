@@ -1,0 +1,10 @@
+{
+  "home": "D:/ARKOS/hermes/profiles/arkos-pilot",
+  "soul_sha256": "0D77261286A1F4A58F0CE7381392777E72D8EEC588339ECE3E319224E55EEF20",
+  "workspace": "D:/ARKOS/ArkosTrial",
+  "tts": "piper/es_AR-daniela-high",
+  "stt": "local/small/es/cpu/int8",
+  "blank_created": true,
+  "gui_profile_verified": true,
+  "credential_values_exported": false
+}

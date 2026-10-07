@@ -1,0 +1,113 @@
+{
+  "kind": "synthetic sequential pipeline; not a human microphone or speaker test",
+  "timestamp_utc": "2026-10-07T17:07:51.072425+00:00",
+  "metric": "input WAV upload start to complete response audio received",
+  "excluded": [
+    "microphone capture",
+    "end-of-speech detection",
+    "native chat orchestration",
+    "tool calls",
+    "first streamed audio",
+    "physical speaker playback"
+  ],
+  "desktop_stt_tts_routes": true,
+  "model": "Qwen3.8-27B-UD-Q4_K_M",
+  "model_thinking": false,
+  "tts": {
+    "provider": "edge",
+    "edge": {
+      "voice": "es-AR-ElenaNeural",
+      "speed": 0.92
+    },
+    "piper": {
+      "voice": "es_AR-daniela-high",
+      "length_scale": 1.12
+    }
+  },
+  "cases": [
+    {
+      "id": "date_set",
+      "input_text": "La reunión de prueba es el quince de octubre a las diez. Confirmá en una frase. No crees un evento.",
+      "input_wav": "D:\\ARKOS\\ArkosTrial\\voice-benchmark\\20261007T170745886267Z\\date_set-input.wav",
+      "transcript": "La reunión de Prueba es el 15 de octubre a las 10. Confirma en una frase. No crees un evento.",
+      "stt_s": 2.961,
+      "answer": "Confirmado: la reunión de Prueba es el 15 de octubre a las 10.",
+      "llm_s": 4.244,
+      "tts_s": 2.011,
+      "pipeline_to_complete_audio_s": 9.216,
+      "audio_bytes": 32544,
+      "provider": "edge",
+      "output_audio": "D:\\ARKOS\\ArkosTrial\\voice-benchmark\\20261007T170745886267Z\\date_set-reply.mp3",
+      "status": "completed"
+    },
+    {
+      "id": "date_correct",
+      "input_text": "Corrijo: la reunión de prueba es el dieciséis de octubre a las once. Confirmá en una frase.",
+      "input_wav": "D:\\ARKOS\\ArkosTrial\\voice-benchmark\\20261007T170745886267Z\\date_correct-input.wav",
+      "transcript": "Corijo. La reunión de Prueba es el 16 de octubre a las 11. Confirma en una frase.",
+      "stt_s": 2.601,
+      "answer": "Confirmado: la reunión de Prueba es el 16 de octubre a las 11.",
+      "llm_s": 0.931,
+      "tts_s": 1.589,
+      "pipeline_to_complete_audio_s": 5.122,
+      "audio_bytes": 33696,
+      "provider": "edge",
+      "output_audio": "D:\\ARKOS\\ArkosTrial\\voice-benchmark\\20261007T170745886267Z\\date_correct-reply.mp3",
+      "status": "completed"
+    },
+    {
+      "id": "date_recall",
+      "input_text": "¿Qué día y a qué hora es la reunión de prueba? Respondé en una frase.",
+      "input_wav": "D:\\ARKOS\\ArkosTrial\\voice-benchmark\\20261007T170745886267Z\\date_recall-input.wav",
+      "transcript": "qué día y a qué hora es la reunión de Prueba\", responde en una frase.",
+      "stt_s": 2.474,
+      "answer": "La reunión de Prueba es el 16 de octubre a las 11.",
+      "llm_s": 0.951,
+      "tts_s": 2.124,
+      "pipeline_to_complete_audio_s": 5.548,
+      "audio_bytes": 27360,
+      "provider": "edge",
+      "output_audio": "D:\\ARKOS\\ArkosTrial\\voice-benchmark\\20261007T170745886267Z\\date_recall-reply.mp3",
+      "status": "completed"
+    },
+    {
+      "id": "daily_plan",
+      "input_text": "Dame tres pasos para organizar mi mañana, en una sola frase.",
+      "input_wav": "D:\\ARKOS\\ArkosTrial\\voice-benchmark\\20261007T170745886267Z\\daily_plan-input.wav",
+      "transcript": "Ya me tres pasos para organizar mi mañana en una sola frase.",
+      "stt_s": 2.336,
+      "answer": "Para organizar tu mañana, primero revisa tu lista de tareas pendientes, luego prioriza las tres más importantes y finalmente reserva bloques de tiempo específicos para cada una.",
+      "llm_s": 1.402,
+      "tts_s": 1.796,
+      "pipeline_to_complete_audio_s": 5.534,
+      "audio_bytes": 72288,
+      "provider": "edge",
+      "output_audio": "D:\\ARKOS\\ArkosTrial\\voice-benchmark\\20261007T170745886267Z\\daily_plan-reply.mp3",
+      "status": "completed"
+    },
+    {
+      "id": "calendar_truth",
+      "input_text": "¿Crear una agenda en un archivo equivale a crear un evento en mi calendario? Respondé en una frase.",
+      "input_wav": "D:\\ARKOS\\ArkosTrial\\voice-benchmark\\20261007T170745886267Z\\calendar_truth-input.wav",
+      "transcript": "crear una agenda en un archivo equivale a crear un evento en mi calendario. Respondé en una frase.",
+      "stt_s": 2.691,
+      "answer": "No, crear una agenda en un archivo no equivale a crear un evento en tu calendario.",
+      "llm_s": 1.017,
+      "tts_s": 1.995,
+      "pipeline_to_complete_audio_s": 5.703,
+      "audio_bytes": 37872,
+      "provider": "edge",
+      "output_audio": "D:\\ARKOS\\ArkosTrial\\voice-benchmark\\20261007T170745886267Z\\calendar_truth-reply.mp3",
+      "status": "completed"
+    }
+  ],
+  "human_speech_end_to_first_audible_median_s": null,
+  "completed_count": 5,
+  "expected_count": 5,
+  "medians_s": {
+    "stt_s": 2.601,
+    "llm_s": 1.017,
+    "tts_s": 1.995,
+    "pipeline_to_complete_audio_s": 5.548
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "checked_at": "2026-10-07T15:42:09.2066497Z",
+  "os": "Microsoft Windows 11 Pro",
+  "os_version": "10.0.26200",
+  "architecture": "64 bits",
+  "ram_gb": 63.9,
+  "graphics": [
+    {
+      "Name": "NVIDIA GeForce RTX 3090",
+      "DriverVersion": "32.0.15.9186"
+    }
+  ],
+  "commands_in_path": {
+    "hermes": false,
+    "ollama": false,
+    "python": true,
+    "git": true,
+    "ffmpeg": false
+  },
+  "hermes_profile_exists": false,
+  "note": "No se inspeccionan credenciales ni documentos. VRAM, audio y capacidades reales requieren comprobación en la aplicación. Un alias no demuestra que un programa arranque."
+}

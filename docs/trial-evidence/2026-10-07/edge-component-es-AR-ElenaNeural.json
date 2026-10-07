@@ -1,0 +1,14 @@
+{
+  "provider": "edge",
+  "voice": {
+    "ShortName": "es-AR-ElenaNeural",
+    "Gender": "Female",
+    "Locale": "es-AR"
+  },
+  "rate": "-8%",
+  "path": "D:\\ARKOS\\ArkosTrial\\voz-edge-es-AR-ElenaNeural.mp3",
+  "bytes": 35856,
+  "generation_and_list_seconds": 2.852064699982293,
+  "kind": "real service synthesis; speaker audibility not yet verified",
+  "paid_account_or_key_used": false
+}

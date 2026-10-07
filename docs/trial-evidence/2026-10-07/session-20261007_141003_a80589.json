@@ -1,0 +1,41 @@
+{
+  "session_id": "20261007_141003_a80589",
+  "messages": [
+    {
+      "role": "user",
+      "content": "Chequeo del piloto. Sin herramientas y en cuatro frases breves: ¿cómo me llamo y cuál es mi rol?, ¿qué voz está configurada?, ¿la carpeta de pruebas es el repositorio?, ¿tenés navegador y ElevenLabs conectados?",
+      "tool_name": null,
+      "timestamp": 1791393004.33097
+    },
+    {
+      "role": "assistant",
+      "content": "Te llamás **Jona** y sos el creador y operador de ARKOS. La voz configurada es **Edge es-AR-ElenaNeural**, femenina argentina, a velocidad 0,92. La carpeta de pruebas (`D:/ARKOS/ArkosTrial`) **no** es el repositorio; ese vive aparte en `D:/ARKOS/repos/arkos-personal-ceo-os`. Navegador y ElevenLabs **no** están conectados en este perfil.",
+      "tool_name": null,
+      "timestamp": 1791393018.788815
+    },
+    {
+      "role": "user",
+      "content": "Prueba de memoria, solo dentro de esta conversación: la reunión de prueba es el 15 de octubre a las 10. No crees ningún evento ni uses herramientas. Confirmá en una frase.",
+      "tool_name": null,
+      "timestamp": 1791393082.9511437
+    },
+    {
+      "role": "assistant",
+      "content": "Anotado en esta conversación: la reunión de prueba es el 15 de octubre a las 10.",
+      "tool_name": null,
+      "timestamp": 1791393085.223409
+    },
+    {
+      "role": "user",
+      "content": "s Corrijo: la reunión de prueba es el 16 de octubre a las 11. Confirmá en una frase, sin herramientas.",
+      "tool_name": null,
+      "timestamp": 1791393248.6012018
+    },
+    {
+      "role": "assistant",
+      "content": "Corregido: la reunión de prueba es el 16 de octubre a las 11.",
+      "tool_name": null,
+      "timestamp": 1791393250.3116543
+    }
+  ]
+}

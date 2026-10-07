@@ -1,0 +1,104 @@
+{
+  "kind": "real Hermes CLI; text input, not microphone input",
+  "session_name": "ARKOS rutina 20261007T171719093967Z",
+  "workspace": "D:\\ARKOS\\ArkosTrial\\rutina-20261007T171719093967Z",
+  "cases": [
+    {
+      "id": "identity",
+      "prompt": "¿Cómo me llamo y qué relación tengo con ARKOS?\nPrueba autorizada por Jona. Usá solo herramientas de archivos dentro de esa carpeta cuando haga falta. No envíes mensajes ni crees eventos externos. Respondé brevemente.",
+      "exit_code": 0,
+      "response": "Sos Jona. Sos el creador y operador de ARKOS; yo estoy corriendo como piloto de tu perfil (arkos-pilot) para ayudarte a terminarlo con pruebas conversacionales.\n\nNo necesité tocar archivos para responderte esto: está en mi contexto del piloto.",
+      "elapsed_to_cli_exit_s": 11.083,
+      "status": "response_received_review_required"
+    },
+    {
+      "id": "date_set",
+      "prompt": "La reunión de prueba es el quince de octubre a las diez. Confirmá en una frase. No crees un evento.\nPrueba autorizada por Jona. Usá solo herramientas de archivos dentro de esa carpeta cuando haga falta. No envíes mensajes ni crees eventos externos. Respondé brevemente.",
+      "exit_code": 0,
+      "response": "Recibido: reunión de prueba el 15 de octubre a las 10, y no creé ningún evento.",
+      "elapsed_to_cli_exit_s": 8.958,
+      "status": "response_received_review_required"
+    },
+    {
+      "id": "date_correct",
+      "prompt": "Corrijo: la reunión de prueba es el dieciséis de octubre a las once. Confirmá en una frase.\nPrueba autorizada por Jona. Usá solo herramientas de archivos dentro de esa carpeta cuando haga falta. No envíes mensajes ni crees eventos externos. Respondé brevemente.",
+      "exit_code": 0,
+      "response": "Corregido: reunión de prueba el 16 de octubre a las 11, sin crear ningún evento.",
+      "elapsed_to_cli_exit_s": 7.667,
+      "status": "response_received_review_required"
+    },
+    {
+      "id": "date_recall",
+      "prompt": "¿Qué día y a qué hora es la reunión de prueba? Respondé en una frase.\nPrueba autorizada por Jona. Usá solo herramientas de archivos dentro de esa carpeta cuando haga falta. No envíes mensajes ni crees eventos externos. Respondé brevemente.",
+      "exit_code": 0,
+      "response": "La reunión de prueba es el 16 de octubre a las 11.",
+      "elapsed_to_cli_exit_s": 8.127,
+      "status": "response_received_review_required"
+    },
+    {
+      "id": "plan",
+      "prompt": "Creá D:/ARKOS/ArkosTrial/rutina-20261007T171719093967Z/plan-del-dia.md con tres prioridades de ejemplo y casillas para marcarlas. No inventes reuniones reales.\nPrueba autorizada por Jona. Usá solo herramientas de archivos dentro de esa carpeta cuando haga falta. No envíes mensajes ni crees eventos externos. Respondé brevemente.",
+      "exit_code": 0,
+      "response": "Listo: `D:\\ARKOS\\ArkosTrial\\rutina-20261007T171719093967Z\\plan-del-dia.md` con tres prioridades de ejemplo y casillas.",
+      "elapsed_to_cli_exit_s": 13.666,
+      "status": "artifact_verified",
+      "artifact": "D:\\ARKOS\\ArkosTrial\\rutina-20261007T171719093967Z\\plan-del-dia.md",
+      "bytes": 295,
+      "sha256": "fe573235d9b4f8cfa5001d45b1c6bd5eaece07988573a3f13278476db5e9b3d3",
+      "content": "# Plan del día\n\nTres prioridades de ejemplo (no son reuniones reales):\n\n- [ ] Prioridad 1: revisar la bandeja de entrada y contestar lo urgente.\n- [ ] Prioridad 2: avanzar 30 minutos en una tarea concreta del trabajo.\n- [ ] Prioridad 3: cerrar el día con una nota de 5 minutos sobre lo hecho.\n"
+    },
+    {
+      "id": "shopping",
+      "prompt": "Creá D:/ARKOS/ArkosTrial/rutina-20261007T171719093967Z/compras.md con pan, leche y frutas. Es una lista, no hagas compras.\nPrueba autorizada por Jona. Usá solo herramientas de archivos dentro de esa carpeta cuando haga falta. No envíes mensajes ni crees eventos externos. Respondé brevemente.",
+      "exit_code": 0,
+      "response": "Listo: `D:\\ARKOS\\ArkosTrial\\rutina-20261007T171719093967Z\\compras.md` con pan, leche y frutas. Solo es un archivo, no se hicieron compras.",
+      "elapsed_to_cli_exit_s": 12.764,
+      "status": "artifact_verified",
+      "artifact": "D:\\ARKOS\\ArkosTrial\\rutina-20261007T171719093967Z\\compras.md",
+      "bytes": 43,
+      "sha256": "15c9d6e4f48fa0e7e7c4b7ad5fcbd9abb3e584f3e1bc8da939f093a4560c3874",
+      "content": "# Lista de compras\n\n- Pan\n- Leche\n- Frutas\n"
+    },
+    {
+      "id": "note",
+      "prompt": "Anotá en D:/ARKOS/ArkosTrial/rutina-20261007T171719093967Z/ideas-arkos.md: probar una activación con botón y mejorar la interrupción por voz.\nPrueba autorizada por Jona. Usá solo herramientas de archivos dentro de esa carpeta cuando haga falta. No envíes mensajes ni crees eventos externos. Respondé brevemente.",
+      "exit_code": 0,
+      "response": "Listo: `D:\\ARKOS\\ArkosTrial\\rutina-20261007T171719093967Z\\ideas-arkos.md` con las dos ideas anotadas.",
+      "elapsed_to_cli_exit_s": 17.295,
+      "status": "artifact_verified",
+      "artifact": "D:\\ARKOS\\ArkosTrial\\rutina-20261007T171719093967Z\\ideas-arkos.md",
+      "bytes": 93,
+      "sha256": "ec3531a1f56d94b1913d477a71161f988ec44eaa45f1e6c31f49e9918c4813ec",
+      "content": "# Ideas para ARKOS\n\n- Probar una activación con botón.\n- Mejorar la interrupción por voz.\n"
+    },
+    {
+      "id": "mail_draft",
+      "prompt": "Redactá en D:/ARKOS/ArkosTrial/rutina-20261007T171719093967Z/correo-borrador.md una invitación breve para probar ARKOS, sin destinatario y sin enviarla.\nPrueba autorizada por Jona. Usá solo herramientas de archivos dentro de esa carpeta cuando haga falta. No envíes mensajes ni crees eventos externos. Respondé brevemente.",
+      "exit_code": 0,
+      "response": "Listo: `D:\\ARKOS\\ArkosTrial\\rutina-20261007T171719093967Z\\correo-borrador.md` con la invitación breve. Solo borrador, sin destinatario y sin enviar.",
+      "elapsed_to_cli_exit_s": 16.416,
+      "status": "artifact_verified",
+      "artifact": "D:\\ARKOS\\ArkosTrial\\rutina-20261007T171719093967Z\\correo-borrador.md",
+      "bytes": 360,
+      "sha256": "b8eba2341fd190be5b3c3ea2a5f237bc5737c9c8b610f9611cce5591a30060e1",
+      "content": "# Borrador de correo — invitación a probar ARKOS\n\nAsunto: Probá ARKOS, tu piloto personal\n\nHola,\n\nTe cuento sobre ARKOS, un piloto personal que corre en local: conversamos por voz, anoto prioridades, ideas y listas, y te ayudo a cerrar tareas concretas.\n\n¿Te interesa probarlo? Avísame un día y hora y armamos una sesión corta de 15 minutos.\n\nSaludos.\n"
+    },
+    {
+      "id": "summary",
+      "prompt": "Leé D:/ARKOS/ArkosTrial/rutina-20261007T171719093967Z/plan-del-dia.md y resumime las tres prioridades.\nPrueba autorizada por Jona. Usá solo herramientas de archivos dentro de esa carpeta cuando haga falta. No envíes mensajes ni crees eventos externos. Respondé brevemente.",
+      "exit_code": 0,
+      "response": "Las tres prioridades son: revisar la bandeja y contestar lo urgente, avanzar 30 minutos en una tarea concreta, y cerrar el día con una nota breve de lo hecho.",
+      "elapsed_to_cli_exit_s": 11.968,
+      "status": "response_received_review_required"
+    },
+    {
+      "id": "voice_id",
+      "prompt": "¿Con un identificador de voz ya queda conectado ElevenLabs?\nPrueba autorizada por Jona. Usá solo herramientas de archivos dentro de esa carpeta cuando haga falta. No envíes mensajes ni crees eventos externos. Respondé brevemente.",
+      "exit_code": 0,
+      "response": "No: un identificador de voz solo no conecta la cuenta. ElevenLabs sigue sin estar conectado, y para activarlo habría que habilitar la conexión y decidir cómo manejar las credenciales por un canal seguro. En esta etapa, además, no está contemplado consumo de APIs pagas.",
+      "elapsed_to_cli_exit_s": 9.268,
+      "status": "response_received_review_required"
+    }
+  ],
+  "external_connections_enabled": false
+}

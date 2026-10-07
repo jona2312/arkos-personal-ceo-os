@@ -1,0 +1,19 @@
+{
+  "provider": "edge",
+  "voice": "es-AR-ElenaNeural",
+  "gender": "Female",
+  "locale": "es-AR",
+  "speed": 0.92,
+  "automatic_reply_enabled": true,
+  "assistant_reply": "¡Hola, Jona!",
+  "desktop_text_turn_seconds": 2.0,
+  "synthesis_started_local": "2026-10-07 13:54:34.804",
+  "synthesis_completed_local": "2026-10-07 13:54:48.619",
+  "generated_mp3_bytes": 14400,
+  "native_manual_read_aloud_pressed": false,
+  "user_confirmation_female_audible": "confirmed: user replied todo ok to female Spanish HDMI playback check",
+  "previous_tomas_audible_confirmed_by_user": true,
+  "paid_account_or_key_used": false,
+  "existing_piper_configuration_preserved": true,
+  "profile": "arkos-pilot"
+}

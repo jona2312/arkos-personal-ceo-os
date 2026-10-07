@@ -1,0 +1,23 @@
+{
+  "kind": "file tool component guard; not a model action",
+  "inside": {
+    "bytes_written": 41,
+    "dirs_created": true,
+    "verified": true,
+    "lint": {
+      "status": "skipped",
+      "message": "No linter for .txt files"
+    },
+    "resolved_path": "D:\\ARKOS\\ArkosTrial\\guard-component.txt",
+    "files_modified": [
+      "D:\\ARKOS\\ArkosTrial\\guard-component.txt"
+    ]
+  },
+  "outside": {
+    "bytes_written": 0,
+    "dirs_created": false,
+    "error": "Write denied: 'D:\\ARKOS\\permission-probe-outside.txt' is outside HERMES_WRITE_SAFE_ROOT (D:\\ARKOS\\ArkosTrial). Unset the variable or add this path's directory prefix.",
+    "resolved_path": "D:\\ARKOS\\permission-probe-outside.txt"
+  },
+  "outside_exists": false
+}

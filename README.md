@@ -7,6 +7,11 @@ inventario real, componentes seleccionados de GitHub, prueba local, preparación
 para Windows y roadmap. Ejecutar `python -m arkos_pilot doctor` desde este repo.
 Este incremento no demuestra ni modifica el despliegue de los workflows existentes.
 
+El piloto Hermes tiene un [catálogo de tareas y contexto](docs/HERMES_DAILY_PILOT.md)
+y un [registro de pruebas en Windows](docs/HERMES_DESKTOP_TRIAL_RESULTS_2026-10-07.md).
+Incluye scripts para aplicar el contexto con backup y medir cinco turnos sintéticos
+de voz; los límites de esa medición se documentan junto a los resultados.
+
 > Tu CEO no necesita otro dashboard. Necesita un agente que piense, recuerde y actue.
 
 ARKOS es un sistema operativo ejecutivo basado en agentes con memoria persistente, interfaz por WhatsApp, voz conversacional y aprobacion humana para acciones sensibles.

@@ -1,0 +1,20 @@
+{
+  "kind": "single authorized Hermes TTS tool call; not Desktop auto-reply",
+  "timestamp_utc": "2026-10-07T17:24:13.494296+00:00",
+  "voice_id": "i7QkcKkwN61Pz8KU5OdX",
+  "model_id": "eleven_flash_v2_5",
+  "key_persisted": false,
+  "default_provider": "edge",
+  "generation_calls_requested": 1,
+  "text": "Jonathan, ¿estás por ahí?",
+  "speaker_audibility": "pending",
+  "voice_metadata_http_status": 200,
+  "voice_name": "luxuria",
+  "voice_category": "professional",
+  "usage_read_http_status": 401,
+  "generation_s": 1.876,
+  "status": "failed",
+  "error": "provider_mismatch: Edge remained authoritative; this was not an ElevenLabs synthesis",
+  "review_note": "The per-call provider argument is ignored when a different profile provider is configured. The generated local MP3 belongs to Edge and must not be presented as ElevenLabs audio.",
+  "profile_config_unchanged_during_test": true
+}

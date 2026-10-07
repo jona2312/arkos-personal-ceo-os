@@ -1,0 +1,22 @@
+{
+  "case": "spoken interruption during manual read-aloud, voice conversation active",
+  "session": "20261007_133900_301ac1",
+  "prompt": "resumilo",
+  "human_report": "No toma la interrupción",
+  "result": "failed in tested path",
+  "new_prompt_observed": true,
+  "fully_voice_originated_reply_test": "positive user report: va bien; specific scripted turns not present in latest transcript export, technical correlation pending",
+  "speech_end_to_first_audible_five_samples": "not measured",
+  "voice_date_correction": "pending",
+  "late_prompt_time": "2026-10-07 13:47:17 Argentina",
+  "summary_turn_seconds": 2.7,
+  "voice_retest": {
+    "voice": "es-AR-ElenaNeural",
+    "native_conversation_mode_observed_active": true,
+    "instruction": "Explicame durante un minuto cómo organizar mi día; then interrupt: Pará, resumilo en una frase",
+    "user_report": "va bien",
+    "cut_time_measured": false,
+    "specific_scripted_turns_found_in_latest_export": false,
+    "acceptance": "positive human report, technical correlation pending"
+  }
+}

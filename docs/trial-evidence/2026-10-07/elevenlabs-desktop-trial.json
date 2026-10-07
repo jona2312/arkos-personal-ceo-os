@@ -1,0 +1,30 @@
+{
+  "date_local": "2026-10-07",
+  "timezone": "America/Buenos_Aires",
+  "profile": "arkos-pilot",
+  "session_id": "20261007_141722_5932c9",
+  "requested_text": "Jonathan, ¿estás por ahí?",
+  "configured_provider": "elevenlabs",
+  "voice_id": "i7QkcKkwN61Pz8KU5OdX",
+  "model_id": "eleven_flash_v2_5",
+  "sdk": "elevenlabs==1.59.0 via Hermes pm tts-premium",
+  "credential_location": "private profile .env; not exported",
+  "voice_metadata_http_status": 200,
+  "usage_read_http_status": 401,
+  "usage_count": null,
+  "events": [
+    {"time_local": "14:33:23", "status": "failed", "cause": "Desktop still running previous dependency generation without ElevenLabs"},
+    {"time_local": "14:36:57", "status": "failed", "cause": "Generated SDK module path exceeded Windows MAX_PATH"},
+    {"time_local": "14:38:16.537", "surface": "Desktop speak-stream", "http_status": 401, "service_code": "payment_issue", "service_type": "payment_required"},
+    {"time_local": "14:38:16.845", "surface": "Hermes non-streaming TTS fallback", "http_status": 401, "service_code": "payment_issue", "service_type": "payment_required"}
+  ],
+  "service_reason": "Subscription has a failed or incomplete payment.",
+  "successful_elevenlabs_audio": false,
+  "human_report": "no sale la voz",
+  "default_provider_left_selected": "elevenlabs",
+  "selection_reason": "Jonathan explicitly requested to keep the selected voice until he asks to change it.",
+  "free_voice_ready": "Edge es-AR-ElenaNeural at 0.92",
+  "purchases_or_billing_changes": false,
+  "application_left_open": true,
+  "source": "Native Hermes UI and private agent.log; only selected non-secret fields exported"
+}
