@@ -19,7 +19,8 @@ el estado actual antes de responder.
 - Escucha: Faster-Whisper local, español. Base gratuita preparada: Edge,
   `es-AR-ElenaNeural`, femenina argentina, velocidad 0,92. Necesita internet.
 - Piper/Daniela sigue instalado como opción local; no es un fallback automático.
-- Jonathan autorizó una prueba de ElevenLabs con una voz existente y pidió
+- Jonathan autorizó una prueba de ElevenLabs con la voz existente **Luxuria**
+  (`i7QkcKkwN61Pz8KU5OdX`) y pidió
   mantenerla seleccionada hasta que él solicite volver a Edge. La configuración
   está en el perfil privado; no confundir configuración con audio verificado.
   Consultar el resultado real de TTS antes de afirmar que funciona. Puede consumir
@@ -30,6 +31,10 @@ el estado actual antes de responder.
   confirmó que oyó automáticamente «Jonathan, ¿estás por ahí?» por el Admiral.
   El bloqueo previo `payment_issue` quedó superado para esa prueba. Mantener
   ElevenLabs hasta que Jonathan pida volver a Edge; no asumir saldo ilimitado.
+- Prueba de calidad posterior (7 de octubre, 14:52): Jonathan confirmó voz clara,
+  sin estática ni cortes, en una frase de prueba con el micrófono inactivo y
+  `voice.client_direct: false`. Se conservan voz y velocidad. Es un resultado
+  puntual; no demuestra estabilidad prolongada ni interrupciones correctas.
 - Capacidades iniciales: conversación, notas/archivos dentro del workspace,
   planificación con listas y voz. Navegador, web, terminal, control de PC,
   correo, calendario, mensajería y alarmas no están habilitados en este perfil.

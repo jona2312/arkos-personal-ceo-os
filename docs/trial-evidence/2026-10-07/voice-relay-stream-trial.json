@@ -1,0 +1,89 @@
+{
+  "timestamp_utc": "2026-10-07T17:48:56.736080+00:00",
+  "before": {
+    "stt": {
+      "mode": "relay",
+      "provider": null,
+      "wire": null,
+      "model": null,
+      "voice": null
+    },
+    "tts": {
+      "mode": "direct",
+      "provider": "elevenlabs",
+      "wire": "elevenlabs-tts",
+      "model": "eleven_flash_v2_5",
+      "voice": "i7QkcKkwN61Pz8KU5OdX"
+    }
+  },
+  "after": {
+    "stt": {
+      "mode": "relay",
+      "provider": null,
+      "wire": null,
+      "model": null,
+      "voice": null
+    },
+    "tts": {
+      "mode": "relay",
+      "provider": null,
+      "wire": null,
+      "model": null,
+      "voice": null
+    }
+  },
+  "changed_field": "voice.client_direct",
+  "new_value": false,
+  "tts_config_unchanged": true,
+  "renderer_cache_ttl_s": 60,
+  "configuration_backup": "D:\\ARKOS\\hermes\\profiles\\arkos-pilot\\config.before-relay-stream-20261007T174856713238Z.yaml",
+  "human_quality_result": "clear_without_static_or_dropouts_with_microphone_inactive",
+  "reason": "Client-direct implementation synthesizes next sentence only after previous playback; testing integrated relay streaming without changing voice/speed.",
+  "human_feedback_verbatim": "Clara, sin estática ni cortes",
+  "native_ui_autoplay_observed": true,
+  "trials": [
+    {
+      "microphone_active": false,
+      "messages": [
+        {
+          "id": 226,
+          "role": "user",
+          "text": "Prueba de reproducción autorizada por Jonathan. Respondé exactamente estas tres frases completas, sin herramientas ni explicaciones adicionales: Jonathan, ¿estás por ahí? Estoy probando mi voz para que podamos conversar con claridad. Cuando termine, contame si escuchaste estática o cortes.",
+          "timestamp_utc": "2026-10-07T17:52:04.929663+00:00"
+        },
+        {
+          "id": 227,
+          "role": "assistant",
+          "text": "Jonathan, ¿estás por ahí? Estoy probando mi voz para que podamos conversar con claridad. Cuando termine, contame si escuchaste estática o cortes.",
+          "timestamp_utc": "2026-10-07T17:52:08.096248+00:00"
+        }
+      ],
+      "text_record_delta_seconds": 3.167,
+      "metric_limit": "Database timestamps, not end-of-speech to first audible sound",
+      "human_quality_result": "clear_without_static_or_dropouts"
+    },
+    {
+      "microphone_active": true,
+      "messages": [
+        {
+          "id": 228,
+          "role": "user",
+          "text": "Jonathan pide que lo llames ahora para conversar. Respondé exactamente: Jona, ¿estás? Quiero que hablemos. Sin herramientas ni texto adicional.",
+          "timestamp_utc": "2026-10-07T17:53:26.348974+00:00"
+        },
+        {
+          "id": 229,
+          "role": "assistant",
+          "text": "Jona, ¿estás? Quiero que hablemos.",
+          "timestamp_utc": "2026-10-07T17:53:28.418891+00:00"
+        }
+      ],
+      "text_record_delta_seconds": 2.07,
+      "metric_limit": "Database timestamps, not end-of-speech to first audible sound",
+      "human_quality_result": "pending_specific_confirmation"
+    }
+  ],
+  "final_native_ui_state": "Escuchando",
+  "causality_limit": "Transport changed and first test had microphone off. Extended conversation and human barge-in not established.",
+  "updated_utc": "2026-10-07T17:54:14.930924+00:00"
+}

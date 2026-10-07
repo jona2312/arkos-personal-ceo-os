@@ -476,6 +476,46 @@ y un backup privado del USER anterior. El SOUL posterior a la confirmación tien
 SHA-256 `0bf80058cf8fdcf008298c6cff391afadec00e01d3b89d70d58411557ed1f374`.
 No se reinició ni interrumpió la conversación que Jonathan ya tenía activa.
 
+## Estática y cortes: prueba del transporte de audio
+
+Jonathan indicó que la estática aparecía solo con Hermes. En la conversación
+describió caídas de volumen y palabras que se pierden. La sesión antigua aún
+atribuía la voz a Edge y propuso modificar su velocidad; se corrigió explícitamente
+el contexto del chat para reconocer Luxuria/ElevenLabs. No se aceptó como
+diagnóstico la explicación del modelo sobre la conexión de red. Algunas respuestas
+de texto también acababan incompletas; su causa no quedó determinada.
+
+Se comprobó que la muestra MP3 de ElevenLabs generada a las 14:43 decodifica sin
+errores (mono, 44.100 Hz, 1,950 s, pico -6,647 dBFS). Eso no sustituye la escucha
+humana ni demuestra que la reproducción de Hermes estuviera libre de ruido.
+
+El código de Desktop muestra que el modo directo solicita cada frase después de
+terminar de reproducir la anterior. Para probar el transporte integrado por
+streaming se cambió **solo `voice.client_direct` a `false`** en `arkos-pilot`,
+con backup privado del YAML. El endpoint autenticado confirmó `tts.mode: relay`.
+La caché del cliente dura 60 s; el ensayo se lanzó después de ese plazo.
+Se mantuvieron proveedor, voz, velocidad, salida HDMI y opciones de interrupción.
+No se modificó la configuración de Windows ni se contrató ningún plan.
+
+A las **14:52:04** se envió desde la UI nativa una prueba de tres frases que
+empieza «Jonathan, ¿estás por ahí?». Hermes produjo el texto completo a las
+**14:52:08** y mostró «Leyendo en voz alta» automáticamente, con conversación de
+voz inactiva para aislar la salida. Jonathan confirmó **«Clara, sin estática ni
+cortes»**. La diferencia entre registros del pedido y la respuesta fue 3,167 s;
+no mide la primera muestra audible y no valida el objetivo conversacional de 3 s.
+
+A pedido de Jonathan se reactivó la conversación de voz y a las **14:53:26** se
+envió «Jona, ¿estás? Quiero que hablemos». El texto completo quedó registrado
+a las **14:53:28** (2,070 s entre registros). La UI volvió a «Escuchando» y quedó
+abierta. La calidad de este segundo llamado con micrófono activo y la estabilidad
+durante una conversación larga quedan pendientes de confirmación específica.
+
+La mejora inicial está confirmada por el usuario, pero no aísla todavía la causa:
+el primer ensayo cambió el transporte y se hizo sin micrófono. No se declara
+resuelta definitivamente la estática ni verificada una interrupción humana.
+Evidencia: `voice-relay-stream-trial.json`. El contexto versionado identifica
+Luxuria y este resultado puntual para evitar volver a confundirla con Edge.
+
 ## Estado de aceptación actualizado
 
 | Caso | Estado actual | Evidencia |
@@ -494,6 +534,7 @@ No se reinició ni interrumpió la conversación que Jonathan ya tenía activa.
 | Cinco latencias y mediana | Benchmark sintético: 5,548 s; humana pendiente | Hasta audio completo; no fin de habla a primer audio audible |
 | Tareas cotidianas del agente | Diez pedidos ejecutados y revisados | Cuatro archivos comprobados; corrección de fecha retenida |
 | ElevenLabs | Generación y saludo automático confirmados después del reintento | MP3 real; Jonathan confirmó audio por Admiral; bloqueo inicial conservado en evidencia |
+| Estática y cortes | Primera prueba limpia confirmada; conversación prolongada pendiente | Transporte relay, micrófono inactivo en la prueba de las 14:52; después se reactivó la escucha |
 
 ## Evidencia
 
