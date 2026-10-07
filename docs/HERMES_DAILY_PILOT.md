@@ -9,6 +9,39 @@ devolvió `payment_issue`; después de que Jonathan informó haber resuelto el
 pago, generó audio real y él confirmó el saludo automático por el Admiral.
 No hay un router multiagente conectado.
 
+**Estado de voz al cierre del 7 de octubre:** piloto en evaluación, con fluidez
+sostenida fallida/no resuelta. Hubo audio audible y una muestra breve limpia,
+pero después reaparecieron cortes y respuestas de texto incompletas. La prueba
+de voz quedó detenida por hoy; este documento no autoriza reiniciarla en segundo
+plano ni ejecutar nuevas síntesis pagas.
+
+## Condición de aceptación de la voz como producto
+
+Requisito de Jonathan: seleccionar una voz propia debe conservar una conversación
+fluida. Una credencial válida, un archivo de audio o un saludo aislado no bastan
+para dar la experiencia por lista para usuarios. Cada combinación de proveedor,
+voz, modelo y transporte anunciada como compatible debe superar el mismo ensayo;
+un resultado con Luxuria no valida todas las voces de ElevenLabs.
+
+Protocolo para retomar, todavía pendiente de ejecución:
+
+| Comprobación | Condición para aprobar |
+|---|---|
+| Conversación sostenida | 20 turnos consecutivos en español, con respuestas cortas y largas, sin finales prematuros de texto ni cortes de audio no solicitados; confirmar escucha humana |
+| Interrupciones | 5 interrupciones intencionales: detener la voz anterior, conservar el nuevo pedido y responderlo; medir tiempo de corte y comprobar que el sonido de los parlantes no dispara falsos turnos |
+| Respuesta automática | Pedidos hablados y escritos, con conversación de voz activa e inactiva: respuesta audible según la preferencia configurada, sin pulsar «Leer en voz alta» ni duplicar reproducción |
+| Demora | Medir 5 turnos simples desde fin de habla hasta primer audio audible; registrar mediana y máximo, y arranque en frío aparte. Mantener el objetivo provisional de mediana de 3 s del procedimiento de Desktop |
+| Cambio de voz | Ejecutar la misma secuencia con la base gratuita y una voz autorizada del proveedor opcional; preservar nombre, memoria y permisos, comprobar la voz efectiva y la restauración. Una voz personal todavía no probada queda pendiente |
+| Fallos del proveedor | Ante error de credencial, cuota o red, mostrar un error comprensible y una vía de recuperación; no quedar en silencio sin explicación, reintentar indefinidamente ni activar consumo pago sin autorización |
+| Reapertura | Conservar selección de voz y preferencias tras reabrir, sin reproducir respuestas antiguas ni iniciar escucha inesperada |
+
+Antes del ensayo completo, aislar el fallo actual con el mismo texto y la escucha
+apagada/activada, correlacionando generación, cancelación, síntesis y reproducción.
+Una respuesta ya truncada en el historial debe investigarse antes de ajustar
+la calidad de TTS. Registrar versiones, condiciones y fallos; no publicar la voz
+como estable mientras alguno de estos casos siga fallando. Se trata de un umbral
+de aceptación del piloto, no de una garantía universal ni un resultado ya medido.
+
 `config/hermes-daily-tasks.json` contiene los comandos de prueba y sus resultados
 esperados. Es un catálogo de pruebas, no un ejecutor que habilita herramientas.
 
