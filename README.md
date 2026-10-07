@@ -1,5 +1,12 @@
 # ARKOS Personal CEO OS
 
+## Centro de tareas local
+
+Interfaz responsive conectada a la cola del piloto: notas, recortes, revisión,
+aprobación, ejecución y resultados. Instrucciones y límites en
+[Task Center](docs/task-center/README.md). Correo, WhatsApp y sincronización
+celular–PC figuran como pendientes; el preparador todavía no conecta el chat de Hermes.
+
 # Piloto de escritorio ARKOS
 
 El nuevo trabajo de escritorio está en [DESKTOP_PILOT.md](docs/DESKTOP_PILOT.md):
