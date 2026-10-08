@@ -75,9 +75,12 @@ class Queue:
         self.db.execute("UPDATE tasks SET state='blocked', result='Ejecución interrumpida: revisar salida antes de aprobar otra vez', updated=? WHERE state='running'", (time.time(),))
         self.db.commit()
 
-    def run_next(self):
+    def run_next(self, task_id=None):
         self.db.execute("BEGIN IMMEDIATE")
-        row = self.db.execute("SELECT id FROM tasks WHERE state='queued' ORDER BY created LIMIT 1").fetchone()
+        if task_id is None:
+            row = self.db.execute("SELECT id FROM tasks WHERE state='queued' ORDER BY created LIMIT 1").fetchone()
+        else:
+            row = self.db.execute("SELECT id FROM tasks WHERE state='queued' AND id=?", (task_id,)).fetchone()
         if not row:
             self.db.commit()
             return None
