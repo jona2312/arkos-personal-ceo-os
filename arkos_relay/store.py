@@ -50,6 +50,12 @@ CREATE TABLE IF NOT EXISTS approvals (
 CREATE TABLE IF NOT EXISTS task_events (
   id INTEGER PRIMARY KEY AUTOINCREMENT, task_id TEXT NOT NULL, user_id TEXT NOT NULL, at REAL NOT NULL,
   actor TEXT NOT NULL, from_state TEXT, to_state TEXT, detail TEXT);
+CREATE TABLE IF NOT EXISTS viewer_codes (
+  code_hash TEXT PRIMARY KEY, user_id TEXT NOT NULL REFERENCES users(id), device_id TEXT NOT NULL REFERENCES devices(id),
+  created_at REAL NOT NULL, expires_at REAL NOT NULL, used_at REAL);
+CREATE TABLE IF NOT EXISTS viewer_tokens (
+  token_hash TEXT PRIMARY KEY, user_id TEXT NOT NULL REFERENCES users(id), device_id TEXT NOT NULL REFERENCES devices(id),
+  created_at REAL NOT NULL, revoked_at REAL);
 """
 
 PAIRING_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"  # no 0/O/1/I
@@ -176,6 +182,15 @@ class Store:
                 self.db.execute("UPDATE devices SET last_seen_at=? WHERE id=?", (self.clock(), row["id"]))
         return (row["user_id"], row["id"]) if row else None
 
+    def auth_viewer(self, token):
+        """Read-only credential: one user, one device, no approve/claim/execute routes."""
+        with self.lock:
+            row = self.db.execute("""SELECT v.user_id, v.device_id FROM viewer_tokens v
+                JOIN devices d ON d.id=v.device_id JOIN users u ON u.id=v.user_id
+                WHERE v.token_hash=? AND v.revoked_at IS NULL AND d.revoked_at IS NULL AND u.disabled_at IS NULL""",
+                (token_hash(token),)).fetchone()
+        return (row["user_id"], row["device_id"]) if row else None
+
     def bind_channel(self, user_id, channel, address):
         with self.tx() as db:
             db.execute("INSERT OR REPLACE INTO channel_bindings VALUES (?,?,?,?)", (channel, address, user_id, self.clock()))
@@ -238,6 +253,7 @@ class Store:
             if not db.execute("SELECT 1 FROM devices WHERE id=? AND user_id=?", (device_id, user_id)).fetchone():
                 raise not_found()
             db.execute("UPDATE devices SET revoked_at=COALESCE(revoked_at, ?) WHERE id=?", (self.clock(), device_id))
+            db.execute("UPDATE viewer_tokens SET revoked_at=COALESCE(revoked_at, ?) WHERE device_id=?", (self.clock(), device_id))
             for task in db.execute("SELECT * FROM tasks WHERE lease_device_id=? AND state IN (?,?)", (device_id, c.CLAIMED, c.RUNNING)).fetchall():
                 if task["state"] == c.CLAIMED:
                     target = c.APPROVED if self._valid_approval(task, self.clock()) else c.AWAITING_APPROVAL
@@ -245,6 +261,57 @@ class Store:
                 else:
                     self._transition(task, c.UNKNOWN, f"user:{user_id}", "device_revoked_during_execution")
         return {"device_id": device_id, "revoked": True}
+
+    # --- read-only viewer (PC screen) ------------------------------------------------
+
+    def create_viewer_code(self, user_id, device_id, ttl_seconds=600):
+        """Issued by the user, never by the device itself: reading the whole queue needs explicit consent."""
+        code = "".join(secrets.choice(PAIRING_ALPHABET) for _ in range(12))
+        now = self.clock()
+        with self.tx() as db:
+            if not db.execute("SELECT 1 FROM devices WHERE id=? AND user_id=? AND revoked_at IS NULL", (device_id, user_id)).fetchone():
+                raise not_found()
+            db.execute("INSERT INTO viewer_codes VALUES (?,?,?,?,?,NULL)", (token_hash(code), user_id, device_id, now, now + ttl_seconds))
+        return {"code": f"{code[:4]}-{code[4:8]}-{code[8:]}", "expires_at": now + ttl_seconds, "device_id": device_id}
+
+    def pair_viewer(self, code):
+        normalized = "".join(ch for ch in str(code).upper() if ch.isalnum())
+        now = self.clock()
+        with self.tx() as db:
+            row = db.execute("""SELECT c.* FROM viewer_codes c JOIN devices d ON d.id=c.device_id
+                WHERE c.code_hash=? AND d.revoked_at IS NULL""", (token_hash(normalized),)).fetchone()
+            if not row or row["used_at"] is not None or row["expires_at"] <= now:
+                raise RelayError(401, "invalid_viewer_code", "Código de lectura inválido, usado o vencido")
+            db.execute("UPDATE viewer_codes SET used_at=? WHERE code_hash=?", (now, row["code_hash"]))
+            token = new_token("akr")
+            db.execute("INSERT INTO viewer_tokens VALUES (?,?,?,?,NULL)", (token_hash(token), row["user_id"], row["device_id"], now))
+        return {"device_id": row["device_id"], "viewer_token": token}
+
+    def revoke_viewer_tokens(self, user_id, device_id):
+        with self.tx() as db:
+            if not db.execute("SELECT 1 FROM devices WHERE id=? AND user_id=?", (device_id, user_id)).fetchone():
+                raise not_found()
+            count = db.execute("UPDATE viewer_tokens SET revoked_at=? WHERE device_id=? AND user_id=? AND revoked_at IS NULL",
+                               (self.clock(), device_id, user_id)).rowcount
+        return {"device_id": device_id, "revoked_viewer_tokens": count}
+
+    def viewer_tasks(self, user_id, device_id, after_version=0, limit=200):
+        """Tasks for this device or for any device of the user. Pure read apart from time-based expiry."""
+        limit = max(1, min(int(limit), 500))
+        with self.tx() as db:
+            rows = db.execute("""SELECT * FROM tasks WHERE user_id=? AND (target_device_id IS NULL OR target_device_id=?)
+                AND version>? ORDER BY version LIMIT ?""", (user_id, device_id, int(after_version), limit + 1)).fetchall()
+            head = db.execute("SELECT value FROM meta WHERE key='version'").fetchone()[0]
+            tasks = []
+            for row in rows[:limit]:
+                approval = db.execute("""SELECT expires_at FROM approvals WHERE task_id=? AND revoked_at IS NULL
+                    ORDER BY created_at DESC LIMIT 1""", (row["id"],)).fetchone()
+                task = self.public_task(row)
+                for private in ("lease_id", "lease_expires_at", "client_request_id"):
+                    task.pop(private)
+                task["approval_expires_at"] = approval["expires_at"] if approval and row["state"] in (c.APPROVED, c.CLAIMED) else None
+                tasks.append(task)
+        return {"tasks": tasks, "has_more": len(rows) > limit, "head_version": head}
 
     def _active_devices(self, user_id):
         return [r["id"] for r in self.db.execute("SELECT id FROM devices WHERE user_id=? AND revoked_at IS NULL", (user_id,))]
