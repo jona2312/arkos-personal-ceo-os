@@ -23,7 +23,7 @@ function title(task) {return task.payload.action === 'note' ? (task.payload.text
 function description(task) {return task.payload.action === 'note' ? task.payload.text : `${task.payload.source}\nDesde ${task.payload.start} s · ${task.payload.duration} s de duración`;}
 function statusPill(task) {return element('span', 'status-pill ' + task.state, labels[task.state] || task.state);}
 function taskCard(task, results = false) {
-  const card = element('article', 'task-card'); card.dataset.taskId = task.id;
+  const card = element('article', 'task-card'); card.dataset.taskId = task.id; card.dataset.state = task.state;
   const top = element('div', 'card-top'); top.append(element('span', 'card-type', task.payload.action === 'note' ? '▧' : '▷'), element('span', '', new Date(task.created * 1000).toLocaleDateString('es-AR', {day:'numeric',month:'short'})));
   card.append(top, element('h3','',title(task)), element('p','excerpt',description(task)), statusPill(task));
   const action = element('button','secondary card-action', task.state === 'completed' ? 'Abrir resultado ↗' : task.state === 'queued' ? 'Revisar y ejecutar →' : 'Ver tarea →');
@@ -153,7 +153,7 @@ function renderInbox(){
   $('inbox-read').disabled=!state.online||!tasks.some(t=>!seenNotices.has(noticeKey(t)));
   if(!tasks.length){empty(list,'Todo en su lugar','Los avisos aparecerán cuando crees una tarea.');return;}
   for(const task of tasks.slice(0,5)){
-    const unseen=!seenNotices.has(noticeKey(task));const item=element('button','notice '+(unseen?'unseen':'seen'));
+    const unseen=!seenNotices.has(noticeKey(task));const item=element('button','notice notice-'+task.state+' '+(unseen?'unseen':'seen'));
     const copy=element('span','notice-copy');copy.append(element('strong','',noticeText[task.state]),element('p','',title(task)),element('small','',new Date(task.updated*1000).toLocaleString('es-AR',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})));
     item.append(element('span','notice-symbol',task.state==='completed'?'✓':task.state==='blocked'?'!':'◇'),copy);
     if(unseen)item.append(element('span','notice-unread'));item.disabled=!state.online;

@@ -9,6 +9,13 @@ haber verificado cómo funciona el producto mostrado.
 ## Incremento implementado
 
 - Fondo CSS con auroras, trama y puntos; núcleo con tres anillos animados.
+  Revisión de color: cian eléctrico con magenta/violeta, luz interior y
+  paneles con tintes más intensos. Avisos y estados usan colores distintos,
+  además de sus etiquetas; no dependen solo del color para interpretarse.
+  La herramienta de generación de imágenes se usó para explorar un concepto
+  visual. Su dirección se tradujo a CSS/SVG: malla esférica decorativa, marcos
+  geométricos y contornos de luz. El bitmap del concepto no es la aplicación,
+  no se usa de fondo ni incorpora sus datos decorativos al producto.
   No usa WebGL, canvas, video de fondo, dependencias ni recursos externos.
 - Movimiento configurable, preferencia persistente, respeto a
   `prefers-reduced-motion`; animaciones pausadas con pestaña oculta.

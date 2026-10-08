@@ -22,3 +22,68 @@
 @media(max-width:760px){.ambient .aurora{width:650px;height:650px;opacity:.23}.aurora-one{left:-300px;top:-200px}.aurora-two{right:-400px;top:40%}.topbar{padding:0 15px}.top-actions{gap:2px}.local-clock{font-size:12px}.local-chip{font-size:7px;padding:5px}.breadcrumb{font-size:10px}.breadcrumb span{margin:0 4px}.topbar .user-avatar{display:none}main{padding:24px 16px}.hero h1{font-size:34px}.hero .eyebrow{font-size:8px;line-height:1.7}.hero .subtitle{font-size:12px}.cockpit-grid{gap:16px}.command-core{padding:20px}.core-top{align-items:flex-start}.core-top .eyebrow{font-size:8px;line-height:1.7;max-width:130px}.core-top .status-pill{font-size:8px}.core-body{display:flex;flex-direction:column;gap:20px;padding:24px 0;text-align:center}.reactor{width:160px;height:160px}.reactor-heart{width:82px;height:82px;font-size:36px}.ring-three{inset:28px}.core-copy h2{font-size:30px}.core-copy h2 br{display:none}.core-copy>.eyebrow{font-size:7px}.core-copy>p:not(.eyebrow){font-size:12px}.mode-switch{justify-content:center}.mode-button{min-width:125px;padding:11px}.core-bottom{flex-direction:column;gap:7px;align-items:center;font-size:9px}.inbox-panel{padding:20px}.inbox-panel h2{font-size:17px}.personal-inbox{display:flex;max-height:320px}.notice-copy strong{font-size:12px}.notice-copy p{font-size:11px}.notice-copy small{font-size:9px}.stats{gap:10px}.stat{padding:16px}.stat>small{font-size:9px;line-height:1.6;display:block}.stat>span{font-size:8px}.board{grid-template-columns:1fr}.board-column+.board-column{border-top:1px solid var(--line)}.column-empty{min-height:75px}.task-card h3{font-size:14px}.task-card .excerpt{font-size:12px}.daily-grid{grid-template-columns:1fr 1fr;gap:10px}.daily-card{padding:15px;border-radius:13px}.daily-card h3{font-size:11px;line-height:1.6}.daily-card>strong{font-size:14px}.daily-card>p{font-size:10px}.daily-card .text-button{font-size:10px}.daily-section .section-title{flex-direction:column;gap:8px}.daily-section h2{font-size:17px}.module-label{font-size:9px}.quick-grid{grid-template-columns:1fr}.conversation-modes{justify-content:flex-start}.footer{line-height:1.7}.sidebar{background:var(--surface)}.toast{font-size:12px}}
 @media(prefers-reduced-motion:reduce){.aurora,.reactor-ring{animation:none!important;will-change:auto}.task-card{transition:none!important}}
 :root[data-motion=off] .aurora{will-change:auto}
+/* Vivid holographic palette requested by Jona. Status colors carry meaning. */
+:root{--energy-pink:#ff4dde;--energy-violet:#a76bff;--energy-gold:#ffc56b;--energy-cyan:var(--accent)}
+:root[data-accent=red]{--energy-pink:#ff769a;--energy-violet:#ff9a5d;--energy-gold:#ffde91}
+:root[data-accent=violet]{--energy-pink:#ed63ff;--energy-violet:#9b76ff;--energy-gold:#7be6ff}
+:root[data-accent=mono]{--energy-pink:#d4dbe6;--energy-violet:#a2b4cf;--energy-gold:#edf2fa}
+:root[data-theme=dark][data-accent=blue]{--accent:#50f0ff;--accent-strong:#066c89;--accent-wash:#10445a;--neon-secondary:#f553ff;--line:#37557b;--muted:#b0c5df}
+:root[data-theme=dark] .ambient{background:radial-gradient(ellipse at 38% 8%,#08375555,transparent 45%),radial-gradient(ellipse at 95% 60%,color-mix(in srgb,var(--energy-pink) 13%,transparent),transparent 50%)}
+:root[data-theme=dark] .aurora-one{opacity:.52}:root[data-theme=dark] .aurora-two{opacity:.37}
+:root[data-theme=dark] .ambient-grid{background-image:linear-gradient(#60ddff0c 1px,transparent 1px),linear-gradient(90deg,#60ddff0c 1px,transparent 1px)}
+:root[data-theme=dark] .command-core{border-color:color-mix(in srgb,var(--accent) 65%,var(--line));background:radial-gradient(ellipse at 15% 45%,color-mix(in srgb,var(--accent) 25%,transparent),transparent 65%),radial-gradient(ellipse at 95% 0%,color-mix(in srgb,var(--energy-pink) 22%,transparent),transparent 70%),linear-gradient(140deg,#071a33,#14122d);box-shadow:inset 0 0 32px color-mix(in srgb,var(--accent) 8%,transparent),0 0 28px color-mix(in srgb,var(--accent) 13%,transparent)}
+:root[data-theme=dark] .command-core::before{content:"";position:absolute;top:0;left:28px;right:28px;height:2px;background:linear-gradient(90deg,var(--accent),var(--energy-violet),var(--energy-pink));box-shadow:0 0 16px var(--energy-violet)}
+:root[data-theme=dark] .core-top>.status-pill{color:#ffd4fc;background:color-mix(in srgb,var(--energy-pink) 24%,#0b152a);border:1px solid color-mix(in srgb,var(--energy-pink) 65%,transparent);box-shadow:0 0 15px color-mix(in srgb,var(--energy-pink) 16%,transparent)}
+:root[data-theme=dark][data-accent=mono] .core-top>.status-pill{color:var(--text)}
+:root[data-theme=dark] .reactor::before{inset:4px;background:radial-gradient(circle,color-mix(in srgb,var(--energy-pink) 25%,transparent),color-mix(in srgb,var(--accent) 30%,transparent) 40%,transparent 70%);box-shadow:0 0 60px color-mix(in srgb,var(--accent) 34%,transparent)}
+:root[data-theme=dark] .ring-one{border-width:3px;box-shadow:0 0 12px color-mix(in srgb,var(--accent) 60%,transparent),inset 0 0 18px color-mix(in srgb,var(--accent) 20%,transparent)}
+:root[data-theme=dark] .ring-two{border-width:2px;border-color:var(--energy-pink);box-shadow:0 0 15px color-mix(in srgb,var(--energy-pink) 40%,transparent)}
+:root[data-theme=dark] .ring-three{border-width:4px;border-right-color:var(--energy-violet);border-bottom-color:var(--accent);box-shadow:0 0 14px color-mix(in srgb,var(--energy-violet) 55%,transparent)}
+:root[data-theme=dark] .reactor-heart{color:var(--accent);border-color:color-mix(in srgb,var(--energy-pink) 65%,var(--accent));background:radial-gradient(circle at 40% 30%,color-mix(in srgb,var(--accent) 35%,#10152b),#191338 65%);text-shadow:0 0 18px var(--accent);box-shadow:0 0 26px color-mix(in srgb,var(--energy-pink) 40%,transparent),inset 0 0 25px color-mix(in srgb,var(--accent) 25%,transparent)}
+:root[data-theme=dark] .mode-button.selected{background:linear-gradient(115deg,color-mix(in srgb,var(--accent) 24%,var(--bg)),color-mix(in srgb,var(--energy-violet) 24%,var(--bg)));box-shadow:0 0 17px color-mix(in srgb,var(--accent) 20%,transparent)}
+:root[data-theme=dark] .mode-button[data-feature=voice]{border-color:color-mix(in srgb,var(--energy-pink) 50%,var(--line));color:#ffd0f8;background:color-mix(in srgb,var(--energy-pink) 10%,var(--bg))}
+:root[data-theme=dark][data-accent=mono] .mode-button[data-feature=voice]{color:var(--text)}
+:root[data-theme=dark] .inbox-panel{border-color:color-mix(in srgb,var(--energy-violet) 55%,var(--line));background:radial-gradient(ellipse at 100% 0%,color-mix(in srgb,var(--energy-violet) 22%,transparent),transparent 70%),var(--surface);box-shadow:0 0 25px color-mix(in srgb,var(--energy-violet) 10%,transparent)}
+:root[data-theme=dark] .notice-awaiting_approval{--notice-color:var(--energy-gold)}
+:root[data-theme=dark] .notice-queued{--notice-color:var(--accent)}
+:root[data-theme=dark] .notice-running{--notice-color:var(--energy-pink)}
+:root[data-theme=dark] .notice-completed{--notice-color:var(--mint)}
+:root[data-theme=dark] .notice-blocked{--notice-color:var(--pink)}
+:root[data-theme=dark] .notice{border-color:color-mix(in srgb,var(--notice-color) 35%,var(--line));background:linear-gradient(95deg,color-mix(in srgb,var(--notice-color) 10%,var(--bg)),var(--bg));border-left-color:var(--notice-color)}
+:root[data-theme=dark] .notice-symbol,:root[data-theme=dark] .notice-copy>strong{color:var(--notice-color)}
+:root[data-theme=dark] .notice-unread{background:var(--notice-color);box-shadow:0 0 10px var(--notice-color)}
+:root[data-theme=dark] .stat:nth-child(1){--stat-color:var(--energy-gold)}
+:root[data-theme=dark] .stat:nth-child(2){--stat-color:var(--accent)}
+:root[data-theme=dark] .stat:nth-child(3){--stat-color:var(--energy-pink)}
+:root[data-theme=dark] .stat:nth-child(4){--stat-color:var(--mint)}
+:root[data-theme=dark] .stat{position:relative;border-color:color-mix(in srgb,var(--stat-color) 50%,var(--line));background:radial-gradient(ellipse at 100% 0%,color-mix(in srgb,var(--stat-color) 23%,transparent),transparent 75%),var(--surface);box-shadow:inset 0 2px 0 color-mix(in srgb,var(--stat-color) 70%,transparent),0 5px 22px color-mix(in srgb,var(--stat-color) 9%,transparent)}
+:root[data-theme=dark] .stat>strong{color:var(--stat-color);text-shadow:0 0 18px color-mix(in srgb,var(--stat-color) 40%,transparent)}
+:root[data-theme=dark] .task-card[data-state=queued]{border-top:2px solid var(--accent)}
+:root[data-theme=dark] .task-card[data-state=awaiting_approval]{border-top:2px solid var(--energy-gold)}
+:root[data-theme=dark] .task-card[data-state=running]{border-top:2px solid var(--energy-pink)}
+:root[data-theme=dark] .task-card[data-state=completed]{border-top:2px solid var(--mint)}
+:root[data-theme=dark] .daily-card:nth-child(1){--module-color:var(--accent)}
+:root[data-theme=dark] .daily-card:nth-child(2){--module-color:var(--energy-gold)}
+:root[data-theme=dark] .daily-card:nth-child(3){--module-color:var(--energy-pink)}
+:root[data-theme=dark] .daily-card:nth-child(4){--module-color:var(--energy-violet)}
+:root[data-theme=dark] .daily-card{border-color:color-mix(in srgb,var(--module-color) 40%,var(--line));background:radial-gradient(ellipse at 100% 0%,color-mix(in srgb,var(--module-color) 14%,transparent),transparent 75%),var(--surface)}
+:root[data-theme=dark] .daily-icon{color:var(--module-color);text-shadow:0 0 20px color-mix(in srgb,var(--module-color) 65%,transparent)}
+:root[data-theme=dark] .nav-item.active{background:linear-gradient(115deg,var(--accent-wash),color-mix(in srgb,var(--energy-violet) 18%,var(--bg)));border-color:color-mix(in srgb,var(--accent) 50%,var(--line));box-shadow:inset 3px 0 0 var(--accent),0 0 20px color-mix(in srgb,var(--accent) 10%,transparent)}
+:root[data-theme=dark] .primary{border:1px solid color-mix(in srgb,var(--accent) 80%,transparent);background:linear-gradient(110deg,var(--accent-strong),color-mix(in srgb,var(--energy-violet) 45%,var(--accent-strong)));box-shadow:0 0 25px color-mix(in srgb,var(--accent) 22%,transparent)}
+@media(max-width:760px){:root[data-theme=dark] .ambient .aurora-one{opacity:.42}:root[data-theme=dark] .ambient .aurora-two{opacity:.28}}
+/* Translate the approved visual direction into lightweight native UI geometry. */
+.reactor-mesh{position:absolute;inset:9%;width:82%;height:82%;overflow:visible;pointer-events:none}.mesh-lines{stroke:var(--accent);stroke-width:.55;fill:none;opacity:.5}.mesh-nodes{fill:var(--accent);opacity:.7}.reactor-heart{position:relative;z-index:1}
+:root[data-theme=dark] .reactor-mesh{filter:drop-shadow(0 0 3px var(--accent))}.reactor-mesh{animation:mesh-breathe 8s ease-in-out infinite alternate}
+:root[data-theme=dark] .reactor-heart{width:72px;height:72px;font-size:38px;background:radial-gradient(circle,color-mix(in srgb,var(--accent) 30%,#092743),#181435);box-shadow:0 0 35px color-mix(in srgb,var(--energy-pink) 35%,transparent);border-color:color-mix(in srgb,var(--accent) 40%,transparent)}
+:root[data-theme=dark] .command-core,:root[data-theme=dark] .inbox-panel{border-radius:4px 22px 4px 22px}
+:root[data-theme=dark] .command-core{background:linear-gradient(#54e5ff08 1px,transparent 1px),linear-gradient(90deg,#54e5ff08 1px,transparent 1px),radial-gradient(ellipse at 15% 45%,color-mix(in srgb,var(--accent) 24%,transparent),transparent 65%),radial-gradient(ellipse at 95% 0%,color-mix(in srgb,var(--energy-pink) 24%,transparent),transparent 70%),linear-gradient(140deg,#071a33,#14122d);background-size:35px 35px,35px 35px,auto,auto,auto}
+:root[data-theme=dark] .command-core::after{inset:7px;border:1px solid color-mix(in srgb,var(--accent) 25%,transparent);border-radius:2px 17px 2px 17px;background:none;opacity:1}
+:root[data-theme=dark] .inbox-panel{position:relative}
+:root[data-theme=dark] .inbox-panel::after{content:"";position:absolute;top:0;left:20px;right:20px;height:2px;background:linear-gradient(90deg,var(--energy-violet),var(--energy-pink));pointer-events:none;box-shadow:0 0 15px var(--energy-pink)}
+:root[data-theme=dark] .stat{border-radius:4px 16px 4px 16px}
+:root[data-theme=dark] .notice{border-radius:2px 12px 2px 12px}
+:root[data-theme=dark] .task-panel{background:linear-gradient(120deg,#07304533,transparent 50%),var(--surface);border-top-color:color-mix(in srgb,var(--accent) 60%,var(--line))}
+@keyframes mesh-breathe{from{opacity:.55;transform:rotate(-8deg)}to{opacity:1;transform:rotate(8deg)}}
+:root[data-motion=off] .reactor-mesh,:root[data-page-visible=false] .reactor-mesh{animation-play-state:paused}
+@media(prefers-reduced-motion:reduce){.reactor-mesh{animation:none!important}}
+@media(max-width:760px){:root[data-theme=dark] .reactor-heart{width:59px;height:59px;font-size:31px}}

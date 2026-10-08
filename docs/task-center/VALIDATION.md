@@ -72,3 +72,6 @@ an application asset or video background. Its browser clock uses Argentina time.
 
 No relay, Hermes, microphone, weather source, news feed, translator or team service
 was connected by this visual increment. PC uptime and work hours remain pending.
+
+La revisión de intensidad de color y geometría SVG se verificó con el mismo recorrido de
+navegador y capturas regeneradas. No cambia APIs, permisos ni ejecución.
