@@ -212,7 +212,7 @@ function visualPreference(kind,value){
   document.querySelectorAll('[data-'+kind+'-choice]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset[kind+'Choice']===value)));
 }
 for(const kind of ['glow','quality'])document.querySelectorAll('[data-'+kind+'-choice]').forEach(b=>b.addEventListener('click',()=>visualPreference(kind,b.dataset[kind+'Choice'])));
-visualPreference('glow',storage.get('arkos-glow')||'low');
+visualPreference('glow',storage.get('arkos-glow')||(matchMedia('(max-width:760px)').matches?'low':'high'));
 visualPreference('quality',storage.get('arkos-quality')||(matchMedia('(max-width:760px)').matches?'lite':'full'));
 refresh();setInterval(()=>{if(!document.hidden&&!document.querySelector('dialog[open]'))refresh();},3000);
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)refresh();});
