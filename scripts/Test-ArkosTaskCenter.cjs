@@ -1,6 +1,6 @@
 /* Development-only browser test. Requires Playwright; not a runtime dependency. */
 const assert = require('node:assert/strict');
-const {spawn} = require('node:child_process');
+const {spawn,spawnSync} = require('node:child_process');
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
@@ -14,7 +14,7 @@ let browser;
 async function main(){
   const url=await new Promise((resolve,reject)=>{let buffer='';const timer=setTimeout(()=>reject(new Error('Local server did not start')),10000);server.stdout.on('data',chunk=>{buffer+=chunk.toString();const match=buffer.match(/http:\/\/127\.0\.0\.1:\d+\/#key=[\w-]+/);if(match){clearTimeout(timer);resolve(match[0]);}});server.on('error',reject);server.on('exit',code=>{clearTimeout(timer);reject(new Error('Server stopped: '+code));});});
   browser=await chromium.launch({headless:true, ...(process.env.ARKOS_TEST_CHROMIUM ? {executablePath:process.env.ARKOS_TEST_CHROMIUM} : {}), ...(process.env.ARKOS_TEST_CHROMIUM_ARGS ? {args:JSON.parse(process.env.ARKOS_TEST_CHROMIUM_ARGS)} : {})});
-  const page=await browser.newPage({viewport:{width:1512,height:1050},deviceScaleFactor:1});
+  const page=await browser.newPage({viewport:{width:1512,height:1050},deviceScaleFactor:1,timezoneId:'America/Argentina/Buenos_Aires'});
   const errors=[];page.on('pageerror',e=>errors.push(e.message));
   await page.goto(url);
   await page.getByText('Esta PC · conectada',{exact:true}).waitFor();
@@ -45,7 +45,35 @@ async function main(){
   assert.equal(await page.locator('#stat-completed').textContent(),'1');
   assert.equal(await page.locator('#stat-review').textContent(),'1');
   assert.equal(await page.locator('#stat-active').textContent(),'1');
+  assert.equal(await page.locator('#home-board .board-column').count(),4);
+  assert.equal(await page.locator('#inbox-count').textContent(),'3');
+  assert.match(await page.locator('#local-clock').textContent(),/\d{2}:\d{2}/);
+  assert.match(await page.locator('#panel-duration').textContent(),/\d{2}:\d{2}:\d{2}/);
+  await page.getByRole('button',{name:'Voz live',exact:false}).first().click();
+  assert.match(await page.locator('#feature-copy').textContent(),/no enciende el micrófono/);
+  await page.locator('#feature-dialog').getByRole('button',{name:'Cerrar',exact:true}).click();
+  await page.evaluate(()=>{document.activeElement.blur();window.scrollTo(0,0);});
   await page.screenshot({path:path.join(evidence,'desktop-dark.png'),fullPage:true});
+  await page.screenshot({path:path.join(evidence,'desktop-focus.png')});
+  await page.locator('.cockpit-grid').screenshot({path:path.join(evidence,'command-center-detail.png')});
+  if(process.env.ARKOS_TEST_RECORD_MOTION==='1'&&spawnSync('ffmpeg',['-version'],{stdio:'ignore'}).status===0){
+    const motionContext=await browser.newContext({viewport:{width:1512,height:1050},timezoneId:'America/Argentina/Buenos_Aires',recordVideo:{dir:path.join(stateDir,'recording'),size:{width:1512,height:1050}}});
+    const motionPage=await motionContext.newPage();await motionPage.goto(url);
+    await motionPage.getByText('Esta PC · conectada',{exact:true}).waitFor();
+    await motionPage.waitForFunction(()=>performance.now()>6500);
+    const video=motionPage.video();await motionContext.close();
+    const result=spawnSync('ffmpeg',['-hide_banner','-loglevel','error','-y','-ss','1','-i',await video.path(),'-t','5','-an','-c:v','libx264','-pix_fmt','yuv420p','-movflags','+faststart',path.join(evidence,'command-center-motion.mp4')],{encoding:'utf8'});
+    assert.equal(result.status,0,result.stderr);
+  }
+  await page.getByRole('button',{name:'Marcar vistos',exact:true}).click();
+  assert.equal(await page.locator('#inbox-count').textContent(),'0');
+  await page.reload();await page.getByText('Esta PC · conectada',{exact:true}).waitFor();
+  assert.equal(await page.locator('#inbox-count').textContent(),'0');
+  await createNote('Aviso nuevo después de leer la bandeja');
+  assert.equal(await page.locator('#inbox-count').textContent(),'1');
+  await page.locator('#personal-inbox .notice').filter({hasText:'Aviso nuevo después de leer la bandeja'}).click();
+  await page.getByRole('button',{name:'Cancelar tarea',exact:true}).click();
+  assert.equal(await page.locator('#inbox-count').textContent(),'0');
   await page.getByRole('button',{name:'Personalizar apariencia',exact:true}).click();
   await page.getByRole('button',{name:'Claro',exact:false}).click();
   await page.getByRole('button',{name:'Rojo',exact:true}).click();
@@ -53,14 +81,32 @@ async function main(){
   await page.reload();await page.getByText('Esta PC · conectada',{exact:true}).waitFor();
   assert.equal(await page.locator('html').getAttribute('data-theme'),'light');
   assert.equal(await page.locator('html').getAttribute('data-accent'),'red');
+  await page.evaluate(()=>{document.activeElement.blur();window.scrollTo(0,0);});
   await page.screenshot({path:path.join(evidence,'desktop-light.png'),fullPage:true});
   await page.getByRole('button',{name:'Personalizar apariencia',exact:true}).click();
   await page.getByRole('button',{name:'Oscuro',exact:false}).click();await page.getByRole('button',{name:'Azul',exact:true}).click();
   await page.locator('#appearance-dialog').getByRole('button',{name:'Cerrar',exact:true}).click();
+  await page.getByRole('button',{name:'Personalizar apariencia',exact:true}).click();
+  await page.getByRole('button',{name:'Pausado',exact:true}).click();
+  await page.locator('#appearance-dialog').getByRole('button',{name:'Cerrar',exact:true}).click();
+  assert.equal(await page.locator('.ring-one').evaluate(el=>getComputedStyle(el).animationPlayState),'paused');
+  await page.reload();await page.getByText('Esta PC · conectada',{exact:true}).waitFor();
+  assert.equal(await page.locator('html').getAttribute('data-motion'),'off');
+  await page.getByRole('button',{name:'Personalizar apariencia',exact:true}).click();
+  await page.getByRole('button',{name:'Activado',exact:true}).click();
+  await page.locator('#appearance-dialog').getByRole('button',{name:'Cerrar',exact:true}).click();
+  assert.equal(await page.locator('.ring-one').evaluate(el=>getComputedStyle(el).animationPlayState),'running');
+  await page.emulateMedia({reducedMotion:'reduce'});
+  assert.equal(await page.locator('.ring-one').evaluate(el=>getComputedStyle(el).animationName),'none');
+  await page.emulateMedia({reducedMotion:'no-preference'});
   await page.setViewportSize({width:390,height:844});
+  await page.evaluate(()=>{document.activeElement.blur();window.scrollTo(0,0);});
   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
   await page.screenshot({path:path.join(evidence,'mobile-dark.png'),fullPage:true});
   await page.screenshot({path:path.join(evidence,'mobile-viewport.png')});
+  await page.setViewportSize({width:390,height:1100});
+  await page.locator('.command-core').screenshot({path:path.join(evidence,'mobile-core.png')});
+  await page.setViewportSize({width:390,height:844});
   await page.locator('[data-page="tasks"]').click();
   await page.getByLabel('Buscar una tarea').fill('Plan para mañana');
   assert.equal(await page.locator('#tasks-list .task-card').count(),1);
@@ -84,6 +130,6 @@ async function main(){
   await page.getByRole('button',{name:'Actualizar tareas',exact:true}).click();
   await page.getByText('Sin conexión local',{exact:true}).first().waitFor({state:'attached'});
   assert.equal(await page.locator('#connection-banner').isVisible(),true);
-  console.log('PASS: browser → API → SQLite → approved execution → artifact; persistence, cancellation, XSS rendering, mobile layout, theme persistence, search, proposals, pending connections, unauthorized client, offline state.');
+  console.log('PASS: browser → API → SQLite → approved execution → artifact; persistence, cancellation, XSS rendering, mobile layout, theme persistence, motion controls/reduced motion, real task inbox and seen persistence, clock, voice placeholder, search, proposals, pending connections, unauthorized client, offline state.');
 }
 main().catch(e=>{console.error(e.message);process.exitCode=1;}).finally(async()=>{if(browser)await browser.close();if(server.exitCode===null&&!server.killed){server.kill();await new Promise(r=>server.once('exit',r));}fs.rmSync(stateDir,{recursive:true,force:true});});

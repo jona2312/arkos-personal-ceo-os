@@ -41,7 +41,9 @@ there is no CORS permission for other origins.
 ## What works
 
 - **Hoy:** actual counts, queue overview and real empty states. No seeded demo
-  data or simulated connections in the application.
+  data or simulated connections in the application. Review/queued/running/done
+  are separate lanes and counts. Task notices form a personal inbox with
+  browser-local seen preferences; these are not email or team messages.
 - **Tareas:** create notes or prepare a clip from an absolute path on this PC;
   review exact content, approve for 24 hours, separately execute the selected
   task, cancel before execution, filter and search.
@@ -53,7 +55,13 @@ there is no CORS permission for other origins.
 - **Conexiones:** local notes available; FFmpeg availability detected from PATH;
   Hermes chat, email, calendar, WhatsApp and remote sync explicitly pending.
 - **Personalización:** dark/light and blue/red/violet/monochrome, stored in the
-  current browser. Usable at a 390 px mobile viewport, without horizontal scroll.
+  current browser. A CSS neon background and orbital core add motion, with
+  pause controls, reduced-motion support and hidden-tab animation pause. Usable
+  at a 390 px mobile viewport, without horizontal scroll.
+- Device clock/date and a page-open timer are real. The timer is elapsed page
+  time (including background time), resets on reload, and is not PC uptime or
+  hours worked. Voice, weather, news, PC activity, teams and translation have
+  explicit pending explanations; no microphone or external request is started.
 - Background polling updates task state every three seconds while visible and
   no dialog is open. A disconnected server is shown explicitly; cached data is
   not labeled live.
@@ -107,7 +115,9 @@ that Playwright version there and expose its module folder through `NODE_PATH`;
 install its Chromium using the package's official CLI. `ARKOS_TEST_PYTHON` can
 select the Python executable. `ARKOS_TEST_CHROMIUM` can select an existing
 browser executable, and `ARKOS_TEST_CHROMIUM_ARGS` accepts a JSON array of
-launch arguments. No paid calls are made by these tests.
+launch arguments. `ARKOS_TEST_RECORD_MOTION=1` optionally records a short UI
+video; it requires the Playwright recording FFmpeg binary plus system FFmpeg
+for conversion. No paid calls are made by these tests.
 
 The browser test creates a temporary state directory, drives actual UI actions,
 compares generated artifact content, tests reload, cancellation, XSS-safe text,
@@ -115,5 +125,6 @@ mobile overflow, theme persistence, search, pending connections, missing auth an
 disconnection. It then removes its state. Screenshots under `screenshots/` show
 synthetic tasks created through the real UI; they are not Jona's personal data.
 
+See [UI_ROADMAP.md](UI_ROADMAP.md) for the new design and prioritized modules.
 See [VALIDATION.md](VALIDATION.md) for observed results and Windows acceptance.
 See [SYNC_CONTRACT_DRAFT.md](SYNC_CONTRACT_DRAFT.md) before implementing a relay.

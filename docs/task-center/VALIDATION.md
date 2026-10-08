@@ -56,3 +56,19 @@ installation was changed.
 The responsive screenshots demonstrate layout only; they do not claim that a
 phone can reach the loopback server. The mobile/PC protocol is a separate draft
 in `SYNC_CONTRACT_DRAFT.md` and requires coordination before implementation.
+
+## Futuristic UI follow-up — October 7, Argentina time
+
+28 Python tests remain green. The expanded browser flow passed again, including
+real task notices, marking seen, preference persistence, a new unread notice,
+separate queue/running lanes, clock/timer rendering, the honest voice placeholder,
+manual animation pause/persistence and the OS reduced-motion preference.
+
+Desktop dark/cyan, desktop light/red and mobile 390 px screenshots were inspected.
+`desktop-focus.png`, `command-center-detail.png` and `mobile-core.png` provide
+larger views. `command-center-motion.mp4` is a five-second recording of the actual
+local UI with synthetic tasks, converted with FFmpeg; it is evidence only, not
+an application asset or video background. Its browser clock uses Argentina time.
+
+No relay, Hermes, microphone, weather source, news feed, translator or team service
+was connected by this visual increment. PC uptime and work hours remain pending.

@@ -34,11 +34,12 @@ function taskCard(task, results = false) {
 function empty(target, heading, message) {const block = element('div','empty-state');block.append(element('strong','',heading),element('span','',message));target.append(block);}
 function render() {
   $('stat-review').textContent = state.tasks.filter(t => matches(t,'review')).length;
-  $('stat-active').textContent = state.tasks.filter(t => matches(t,'active')).length;
+  $('stat-active').textContent = state.tasks.filter(t => t.state === 'queued').length;
+  $('stat-running').textContent = state.tasks.filter(t => t.state === 'running').length;
   $('stat-completed').textContent = state.tasks.filter(t => matches(t,'completed')).length;
   $('nav-count').textContent = state.tasks.filter(t => !['completed','cancelled'].includes(t.state)).length;
   const board = $('home-board'); board.replaceChildren();
-  for (const [filter,label,hint] of [['review','Por revisar','Tus próximas decisiones aparecen acá.'],['active','En marcha','Las tareas aprobadas esperan tu ejecución.'],['completed','Listo','Cada resultado tendrá su lugar.']]) {
+  for (const [filter,label,hint] of [['review','Por revisar','Tus próximas decisiones aparecen acá.'],['queued','En cola','Aprobadas. Vos elegís cuándo empezar.'],['running','Ejecutando','Las tareas en curso aparecerán acá.'],['completed','Terminadas','Cada resultado tendrá su lugar.']]) {
     const tasks = state.tasks.filter(t => matches(t,filter)).reverse(); const column = element('div','board-column');
     const heading = element('div','column-heading'); heading.append(element('strong','',label),element('span','',tasks.length));column.append(heading);
     if (!tasks.length) column.append(element('div','column-empty',hint)); else tasks.slice(0,3).forEach(t => column.append(taskCard(t)));
@@ -52,6 +53,7 @@ function render() {
   state.tasks.filter(t => t.state === 'completed').reverse().forEach(t => results.append(taskCard(t,true)));
   if (!results.children.length) empty(results,'Los resultados empiezan con una idea','Creá, revisá y ejecutá tu primera nota.');
   renderConnections();
+  renderInbox();
   document.querySelectorAll('.new-task-button,.new-note-button,#quick-clip,#proposal-form button[type=submit]').forEach(b => b.disabled = !state.online);
 }
 function renderConnections() {
@@ -63,7 +65,10 @@ function renderConnections() {
     ['✉','Correo','Lectura, organización y respuestas desde una cuenta autorizada.','Conexión pendiente'],
     ['▦','Calendario','Agenda, disponibilidad y eventos en tu cuenta.','Conexión pendiente'],
     ['◉','WhatsApp','Mensajes autorizados y encargos desde el teléfono.','Conexión pendiente'],
-    ['⌁','Celular y PC','Encargos compartidos, dispositivos vinculados y resultados sincronizados.','Sincronización pendiente']
+    ['⌁','Celular y PC','Encargos compartidos, dispositivos vinculados y resultados sincronizados.','Sincronización pendiente'],
+    ['◷','Actividad de la PC','Arranque, tiempo activo y resumen diario. Hoy solo se mide esta pestaña.','Agente de actividad pendiente'],
+    ['A↔','Traductor','Traducción de texto y voz con revisión antes de enviar.','Integración pendiente'],
+    ['⌘','Equipo e invitados','Mensajes y tareas compartidas con permisos por espacio.','Integración pendiente']
   ];
   for (const [symbol,name,copy,status] of items) {const card=element('article','connection-card');card.append(element('div','connection-symbol',symbol),element('h2','',name),element('p','',copy),element('span','status-pill',status));container.append(card);}
 }
@@ -135,6 +140,50 @@ $('appearance-button').addEventListener('click',()=>$('appearance-dialog').showM
 const mobileAppearance=element('button','icon-button','◐');mobileAppearance.setAttribute('aria-label','Personalizar apariencia');mobileAppearance.addEventListener('click',()=>$('appearance-dialog').showModal());document.querySelector('.top-actions').prepend(mobileAppearance);
 document.querySelectorAll('[data-theme-choice]').forEach(b=>b.addEventListener('click',()=>theme('theme',b.dataset.themeChoice)));
 document.querySelectorAll('[data-accent-choice]').forEach(b=>b.addEventListener('click',()=>theme('accent',b.dataset.accentChoice)));
+// Notices are derived from the actual task snapshot; no messages are invented.
+const noticeText = {awaiting_approval:'Necesita tu aprobación', queued:'Lista para ejecutar', running:'ARKOS está trabajando', completed:'Tu resultado está listo', blocked:'Hay una tarea que revisar'};
+let seenNotices = new Set();
+try {const saved=JSON.parse(storage.get('arkos-seen-notices')||'[]');if(Array.isArray(saved))seenNotices=new Set(saved.filter(v=>typeof v==='string').slice(-1000));} catch { /* Ignore malformed browser preferences. */ }
+function noticeKey(task){return task.id+':'+task.state+':'+task.updated;}
+function notices(){return state.tasks.filter(t=>noticeText[t.state]).slice().sort((a,b)=>b.updated-a.updated);}
+function saveSeen(){storage.set('arkos-seen-notices',JSON.stringify([...seenNotices].slice(-1000)));}
+function renderInbox(){
+  const list=$('personal-inbox');list.replaceChildren();const tasks=notices();
+  $('inbox-count').textContent=tasks.filter(t=>!seenNotices.has(noticeKey(t))).length;
+  $('inbox-read').disabled=!state.online||!tasks.some(t=>!seenNotices.has(noticeKey(t)));
+  if(!tasks.length){empty(list,'Todo en su lugar','Los avisos aparecerán cuando crees una tarea.');return;}
+  for(const task of tasks.slice(0,5)){
+    const unseen=!seenNotices.has(noticeKey(task));const item=element('button','notice '+(unseen?'unseen':'seen'));
+    const copy=element('span','notice-copy');copy.append(element('strong','',noticeText[task.state]),element('p','',title(task)),element('small','',new Date(task.updated*1000).toLocaleString('es-AR',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})));
+    item.append(element('span','notice-symbol',task.state==='completed'?'✓':task.state==='blocked'?'!':'◇'),copy);
+    if(unseen)item.append(element('span','notice-unread'));item.disabled=!state.online;
+    item.addEventListener('click',()=>{seenNotices.add(noticeKey(task));saveSeen();renderInbox();if(task.state==='completed')openArtifact(task).catch(e=>toast(e.message));else review(task);});list.append(item);
+  }
+}
+$('inbox-read').addEventListener('click',()=>{notices().forEach(t=>seenNotices.add(noticeKey(t)));saveSeen();renderInbox();});
+const features={
+  voice:['Voz en vivo','El modo voz permitirá hablar, escuchar e interrumpir a ARKOS. Todavía no está conectado; este botón no enciende el micrófono.','Siguiente paso: integrar transcripción, Hermes y síntesis de voz, con indicador de escucha y botón de detener.'],
+  activity:['Actividad de tu PC','El contador actual mide el tiempo desde que abriste esta pestaña. No mide el arranque de Windows, horas trabajadas ni actividad de otras aplicaciones.','Siguiente paso: un agente local que distinga PC encendida, sesión activa y pausas, con tu configuración y sin registrar teclas ni contenido.'],
+  weather:['Clima y temperatura','Todavía no hay una fuente meteorológica conectada ni una ciudad seleccionada. No mostramos temperatura estimada.','Siguiente paso: elegir ciudad manualmente y autorizar la consulta; mostrar fuente, hora de actualización y último dato disponible.'],
+  news:['Noticias para tu día','La selección de noticias está pendiente. Los titulares deberán tener fuente, fecha y enlace al original.','Siguiente paso: elegir temas, conectar fuentes y separar los hechos publicados del resumen de ARKOS.'],
+  team:['Equipo e invitados','Los mensajes de equipo y las tareas compartidas requieren cuentas e invitaciones. Esta bandeja solo muestra avisos de tus tareas locales.','Siguiente paso: espacios compartidos, permisos por miembro, responsables y comentarios. Ninguna invitación da acceso a tus archivos personales.'],
+  translator:['Traductor de idiomas','La traducción de texto y voz está prevista, pero todavía no hay un motor conectado.','Siguiente paso: idioma de origen y destino, original junto a la traducción y revisión antes de enviar. Identificar cuándo se procesa localmente o en un servicio externo.']
+};
+document.querySelectorAll('[data-feature]').forEach(button=>button.addEventListener('click',()=>{const [name,copy,next]=features[button.dataset.feature];$('feature-title').textContent=name;$('feature-copy').textContent=copy;$('feature-next').textContent=next;$('feature-dialog').showModal();}));
+$('feature-connections').addEventListener('click',()=>$('feature-dialog').close());
+$('writing-mode').addEventListener('click',()=>$('goal').focus());
+const panelOpened=performance.now();
+function updateTime(){
+  const now=new Date();$('local-clock').textContent=now.toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit',hour12:false});$('local-clock').dateTime=now.toISOString();
+  $('local-date').textContent=now.toLocaleDateString('es-AR',{weekday:'long',day:'numeric',month:'long'});
+  const elapsed=Math.floor((performance.now()-panelOpened)/1000);$('panel-duration').textContent=[Math.floor(elapsed/3600),Math.floor(elapsed/60)%60,elapsed%60].map(n=>String(n).padStart(2,'0')).join(':');
+}
+function motion(value){document.documentElement.dataset.motion=value==='off'?'off':'on';storage.set('arkos-motion',document.documentElement.dataset.motion);document.querySelectorAll('[data-motion-choice]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.motionChoice===document.documentElement.dataset.motion)));}
+document.querySelectorAll('[data-motion-choice]').forEach(b=>b.addEventListener('click',()=>motion(b.dataset.motionChoice)));
+motion(storage.get('arkos-motion')||'on');
+function pageVisibility(){document.documentElement.dataset.pageVisible=String(!document.hidden);if(!document.hidden)updateTime();}
+pageVisibility();document.addEventListener('visibilitychange',pageVisibility);updateTime();setInterval(()=>{if(!document.hidden)updateTime();},1000);
+
 theme('theme',storage.get('arkos-theme')||'dark');theme('accent',storage.get('arkos-accent')||'blue');
 refresh();setInterval(()=>{if(!document.hidden&&!document.querySelector('dialog[open]'))refresh();},3000);
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)refresh();});
