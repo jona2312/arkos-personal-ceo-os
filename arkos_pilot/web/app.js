@@ -54,6 +54,7 @@ function render() {
   if (!results.children.length) empty(results,'Los resultados empiezan con una idea','Creá, revisá y ejecutá tu primera nota.');
   renderConnections();
   renderInbox();
+  renderNeuralActivity();
   document.querySelectorAll('.new-task-button,.new-note-button,#quick-clip,#proposal-form button[type=submit]').forEach(b => b.disabled = !state.online);
 }
 function renderConnections() {
@@ -72,7 +73,7 @@ function renderConnections() {
   ];
   for (const [symbol,name,copy,status] of items) {const card=element('article','connection-card');card.append(element('div','connection-symbol',symbol),element('h2','',name),element('p','',copy),element('span','status-pill',status));container.append(card);}
 }
-// Adapter boundary: this endpoint is deliberately not connected to Claude's producer yet.
+// Read-only display adapter to the configured snapshot; no execution authority.
 let remoteView={projection_version:1,sync_status:'not_configured',device_status:'unknown',last_sync:null,tasks:[]};
 function remoteUnavailable(){remoteView={...remoteView,sync_status:remoteView.last_sync?'stale':'unavailable',device_status:'unknown'};ArkosRemoteView.render($('remote-view'),remoteView);}
 async function refreshRemote(){try{remoteView=ArkosRemoteView.validate(await api('/api/remote-view'));ArkosRemoteView.render($('remote-view'),remoteView);}catch{remoteUnavailable();}}
@@ -141,7 +142,7 @@ document.querySelectorAll('[data-filter]').forEach(b=>b.addEventListener('click'
 document.querySelectorAll('.new-task-button,.new-note-button').forEach(b=>b.addEventListener('click',()=>newTask()));
 $('quick-clip').addEventListener('click',()=>newTask('clip'));
 document.querySelectorAll('.close-dialog').forEach(b=>b.addEventListener('click',()=>b.closest('dialog').close()));
-function theme(kind,value){if(kind==='theme'&&!['dark','light'].includes(value))value='dark';if(kind==='accent'&&!['blue','red','violet','mono'].includes(value))value='blue';document.documentElement.dataset[kind]=value;storage.set('arkos-'+kind,value);document.querySelectorAll('[data-'+kind+'-choice]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset[kind+'Choice']===value)));}
+function theme(kind,value){if(kind==='theme'&&!['dark','light'].includes(value))value='dark';if(kind==='accent'&&!['neural','blue','red','violet','mono'].includes(value))value='neural';document.documentElement.dataset[kind]=value;storage.set('arkos-'+kind,value);document.querySelectorAll('[data-'+kind+'-choice]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset[kind+'Choice']===value)));}
 $('appearance-button').addEventListener('click',()=>$('appearance-dialog').showModal());
 const mobileAppearance=element('button','icon-button','◐');mobileAppearance.setAttribute('aria-label','Personalizar apariencia');mobileAppearance.addEventListener('click',()=>$('appearance-dialog').showModal());document.querySelector('.top-actions').prepend(mobileAppearance);
 document.querySelectorAll('[data-theme-choice]').forEach(b=>b.addEventListener('click',()=>theme('theme',b.dataset.themeChoice)));
@@ -190,6 +191,28 @@ motion(storage.get('arkos-motion')||'on');
 function pageVisibility(){document.documentElement.dataset.pageVisible=String(!document.hidden);if(!document.hidden)updateTime();}
 pageVisibility();document.addEventListener('visibilitychange',pageVisibility);updateTime();setInterval(()=>{if(!document.hidden)updateTime();},1000);
 
-theme('theme',storage.get('arkos-theme')||'dark');theme('accent',storage.get('arkos-accent')||'blue');
+theme('theme',storage.get('arkos-theme')||'dark');theme('accent',storage.get('arkos-accent')||'neural');
+ArkosNeural.mount($('neural-backdrop'));
+const networkLabels={offline:'Actividad local: sin actualizar · pulsos detenidos',running:'Actividad local: hay tareas ejecutándose',queued:'Actividad local: tareas en cola · esperando ejecución',review:'Actividad local: tareas por revisar',idle:'Actividad local: en reposo',completed:'Actividad local: una tarea acaba de terminar'};
+let observedStates=null,completionUntil=0;
+function renderNeuralActivity(){
+  if(state.online){
+    if(observedStates)for(const task of state.tasks)if(task.state==='completed'&&observedStates.has(task.id)&&observedStates.get(task.id)!=='completed')completionUntil=Date.now()+10000;
+    observedStates=new Map(state.tasks.map(t=>[t.id,t.state]));
+  }
+  let value=ArkosNeural.activity(state.tasks,state.online);
+  if(state.online&&value!=='running'&&Date.now()<completionUntil)value='completed';
+  document.documentElement.dataset.activity=value;
+  const label=networkLabels[value];if($('network-status').textContent!==label)$('network-status').textContent=label;
+}
+function visualPreference(kind,value){
+  const options=kind==='glow'?['low','medium','high','off']:['lite','full'];
+  if(!options.includes(value))value=options[0];
+  document.documentElement.dataset[kind]=value;storage.set('arkos-'+kind,value);
+  document.querySelectorAll('[data-'+kind+'-choice]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset[kind+'Choice']===value)));
+}
+for(const kind of ['glow','quality'])document.querySelectorAll('[data-'+kind+'-choice]').forEach(b=>b.addEventListener('click',()=>visualPreference(kind,b.dataset[kind+'Choice'])));
+visualPreference('glow',storage.get('arkos-glow')||'low');
+visualPreference('quality',storage.get('arkos-quality')||(matchMedia('(max-width:760px)').matches?'lite':'full'));
 refresh();setInterval(()=>{if(!document.hidden&&!document.querySelector('dialog[open]'))refresh();},3000);
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)refresh();});
