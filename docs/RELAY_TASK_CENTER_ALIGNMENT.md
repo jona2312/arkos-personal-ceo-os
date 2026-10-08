@@ -1,10 +1,32 @@
 # Relay (PR #2) ↔ Task Center (PR #3): diferencias y conexión
 
-Revisado: PR #3 `codex/arkos-task-center` en HEAD `15bf2e8`, incluido
+Revisado: PR #3 `codex/arkos-task-center` en HEAD
+`92cb4625e39e8ed984e62a2fd45c9892cae51980`, incluido
 `docs/task-center/SYNC_CONTRACT_DRAFT.md` v0.1. Este documento no modifica esa rama.
 Ambos PR están apilados sobre #1 y no tocan los mismos archivos. #3 solo cambia
 `Queue.run_next(task_id=None)`; el relay no usa `Queue`, solo `core.execute` y
 `core.file_digest`, que no cambian.
+
+### Cambios de #3 entre `15bf2e8` y `92cb462`
+
+- Solo cambió la UI (`app.js`, `index.html`, `style.css`), la documentación
+  (`UI_ROADMAP.md`, `README.md`, `VALIDATION.md`), las capturas y la prueba de
+  navegador. **No cambiaron** `core.py`, `task_center.py`, la API local ni
+  `SYNC_CONTRACT_DRAFT.md`, así que las diferencias de contrato de §1 siguen vigentes.
+- **Nuevo:** columnas separadas *Por revisar / En cola / Ejecutando / Terminadas*, y una
+  bandeja de avisos personal con clave `id:state:updated` y "visto" guardado solo en el
+  navegador (máximo 1000).
+- `UI_ROADMAP.md` pone como prioridad 1 "Conectar UI al relay del PR #2" sin duplicar
+  aprobaciones, y repite que el relay guarda texto plano.
+- Los avisos remotos necesitan una clave propia (`relay:<remote_id>:<state>:<version>`)
+  para no chocar con los locales. Las columnas del relay se mapean así:
+
+  | Columna | Estados del relay |
+  |---|---|
+  | Por revisar | `awaiting_approval`, `unknown` |
+  | En cola | `approved` |
+  | Ejecutando | `claimed`, `running` |
+  | Terminadas | `succeeded`, `failed`, `rejected`, `cancelled` |
 
 ## 1. Diferencias
 
@@ -42,11 +64,17 @@ tareas creadas en la PC y marcadas como "solo esta PC".
 
 ### Pasos (B)
 
-1. **Espejo de solo lectura (sin credenciales nuevas).**
-   - El agente expone su estado a la pantalla por un archivo o un endpoint loopback del
-     Task Center que lea `ArkosRelayAgent\journal.sqlite3` y `agent.json` en modo
-     `?mode=ro`.
-   - La pantalla muestra una sección "Del celular" con estado, fase y resultado.
+1. **Espejo de solo lectura de toda la cola visible (implementado en el PR apilado sobre #2).**
+   - *Corrección de la propuesta anterior:* leer `journal.sqlite3` no alcanza. El diario
+     solo tiene tareas que el agente ya reservó; no ve las pendientes de aprobación, las
+     aprobadas sin reservar ni las canceladas antes de llegar a la PC.
+   - En su lugar, `agent view-sync` usa una **credencial de lectura `akr_` emitida por
+     el usuario**, sin ampliar el token del dispositivo. Escribe
+     `ArkosRelayAgent\viewer\relay-snapshot.json`; contrato en
+     [RELAY_SNAPSHOT_CONTRACT.md](RELAY_SNAPSHOT_CONTRACT.md).
+   - La pantalla lee ese archivo con su propio reloj para detectar datos
+     desactualizados. Muestra la sección "Del celular" con estado, destino, fechas,
+     resultado y disponibilidad del archivo.
    - Sin botones de aprobar ni ejecutar para esas tareas.
 2. **Etiquetado de origen.**
    - Cada tarjeta lleva `origen: local | relay`.
@@ -87,6 +115,15 @@ tareas creadas en la PC y marcadas como "solo esta PC".
 - Aprobar desde la pantalla con una huella recalculada distinta da 409
   `payload_mismatch`.
 - Vector de huella común en JS (`test_digest_golden_vector`).
+- Lector del snapshot en #3: rechaza un esquema desconocido o un archivo de más de 1 MiB,
+  marca "desactualizado" con su propio reloj y no llama a ninguna ruta de
+  aprobación o ejecución al renderizar.
+
+Ya cubiertas en el relay (`tests/test_relay_viewer.py`): aislamiento entre usuarios y
+entre PCs del mismo usuario; tareas pendientes no entregadas; sincronización
+incremental y paginada; reinicio y desconexión; backup restaurado; snapshot
+desactualizado; ausencia de secretos; límites de tamaño; escritura atómica; leer
+sin ejecutar.
 
 ## 3. Observaciones sobre #3, sin cambios aplicados
 

@@ -51,6 +51,10 @@ def main(argv=None):
     p.add_argument("name"); p.add_argument("path", type=Path)
     p = agent_sub.add_parser("run"); p.add_argument("--once", action="store_true"); p.add_argument("--interval", type=float, default=20)
     agent_sub.add_parser("status")
+    p = agent_sub.add_parser("viewer-pair", help="Vincular la credencial de solo lectura para la pantalla")
+    p.add_argument("--code", required=True)
+    p = agent_sub.add_parser("view-sync", help="Sincronizar la cola remota en un snapshot local (solo lectura)")
+    p.add_argument("--once", action="store_true"); p.add_argument("--interval", type=float, default=30)
 
     args = parser.parse_args(argv)
     try:
@@ -141,6 +145,8 @@ def run_agent(args):
         return 0
     if not config.get("device_id"):
         raise ValueError("Primero vincular: agent pair --server URL --code CODIGO")
+    if args.agent_command in ("viewer-pair", "view-sync"):
+        return run_viewer(args, state_dir, config)
     journal = ag.Journal(state_dir / "journal.sqlite3")
     try:
         if args.agent_command == "status":
@@ -170,6 +176,38 @@ def run_agent(args):
             time.sleep(delay)
     finally:
         journal.close()
+
+
+def run_viewer(args, state_dir, config):
+    """Separate read-only process: never loads device.token, the journal or the executor."""
+    from . import agent as ag
+    from .viewer import ViewerSync
+    if args.agent_command == "viewer-pair":
+        transport = ag.HttpTransport(config["server"], "", allow_insecure_localhost=config.get("allow_insecure_localhost", False))
+        paired = transport.post_public("/v1/viewer/pair", {"code": args.code})
+        if paired["device_id"] != config["device_id"]:
+            raise ValueError("El código de lectura pertenece a otro dispositivo")
+        ag.save_secret(state_dir / "viewer.token", paired["viewer_token"])
+        print(json.dumps({"device_id": paired["device_id"], "viewer": "ok"}, indent=2))
+        return 0
+    token_path = state_dir / "viewer.token"
+    if not token_path.exists():
+        raise ValueError("Falta la credencial de lectura: el usuario debe emitir un código y ejecutar agent viewer-pair")
+    transport = ag.HttpTransport(config["server"], ag.load_secret(token_path),
+                                 allow_insecure_localhost=config.get("allow_insecure_localhost", False))
+    viewer = ViewerSync(transport, state_dir / "viewer", config["device_id"], outputs_dir=state_dir / "outputs")
+    try:
+        while True:
+            snapshot = viewer.sync()
+            print(json.dumps({"snapshot": str(viewer.snapshot_path), "status": snapshot["sync"]["status"],
+                              "tasks": snapshot["task_count"]}), file=sys.stderr)
+            if snapshot["sync"]["status"] == "unauthorized":
+                return 2
+            if args.once:
+                return 0
+            time.sleep(args.interval)
+    finally:
+        viewer.close()
 
 
 if __name__ == "__main__":

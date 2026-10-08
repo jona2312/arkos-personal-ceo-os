@@ -106,6 +106,9 @@ class App:
         elif token and kind == "device" and token.startswith("akd_"):
             found = self.store.auth_device(token)
             principal = {"user_id": found[0], "device_id": found[1]} if found else None
+        elif token and kind == "viewer" and token.startswith("akr_"):
+            found = self.store.auth_viewer(token)
+            principal = {"user_id": found[0], "device_id": found[1]} if found else None
         if not principal:
             raise RelayError(401, "unauthorized", "Credencial ausente, inválida o revocada")
         return principal
@@ -275,6 +278,36 @@ def complete(app, req):
     body = req.json()
     return {"task": app.store.complete(req.user_id, req.device_id, req.args["task_id"], body.get("lease_id"),
                                        body.get("outcome"), body.get("result"))}
+
+
+# --- read-only viewer (PC screen) ---------------------------------------------------
+
+@route("POST", r"/v1/devices/(?P<device_id>dev_[0-9a-f]{32})/viewer-codes", "user")
+def viewer_code(app, req):
+    return 201, app.store.create_viewer_code(req.user_id, req.args["device_id"])
+
+
+@route("POST", r"/v1/devices/(?P<device_id>dev_[0-9a-f]{32})/viewer-tokens/revoke", "user")
+def viewer_revoke(app, req):
+    return app.store.revoke_viewer_tokens(req.user_id, req.args["device_id"])
+
+
+@route("POST", "/v1/viewer/pair", None)
+def viewer_pair(app, req):
+    client = req.environ.get("REMOTE_ADDR", "?")
+    if app.throttle.blocked(client):
+        raise RelayError(429, "too_many_attempts", "Demasiados intentos; esperar 10 minutos")
+    try:
+        return 201, app.store.pair_viewer(req.json().get("code", ""))
+    except RelayError:
+        app.throttle.fail(client)
+        raise
+
+
+@route("GET", "/v1/viewer/tasks", "viewer")
+def viewer_tasks(app, req):
+    q = req.query()
+    return app.store.viewer_tasks(req.user_id, req.device_id, _int(q.get("after_version"), 0), _int(q.get("limit"), 200))
 
 
 # --- WhatsApp (disabled unless configured) -------------------------------------------

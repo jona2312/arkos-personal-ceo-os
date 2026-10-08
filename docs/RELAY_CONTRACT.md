@@ -105,6 +105,10 @@ uno inexistente.
 | `POST /v1/agent/tasks/{id}/heartbeat` `{lease_id}` | dispositivo | Extiende el lease |
 | `POST /v1/agent/tasks/{id}/start` `{lease_id, payload_sha256}` | dispositivo | Última compuerta: lease, aprobación vigente, hash. Idempotente por lease |
 | `POST /v1/agent/tasks/{id}/complete` `{lease_id, outcome, result}` | dispositivo | Idempotente (mismo resultado → 200) |
+| `POST /v1/devices/{id}/viewer-codes` | usuario | Código de 10 min para la credencial de lectura `akr_` de esa PC |
+| `POST /v1/devices/{id}/viewer-tokens/revoke` | usuario | Revoca las credenciales de lectura de esa PC |
+| `POST /v1/viewer/pair` `{code}` | — | La PC canjea el código → `{device_id, viewer_token}` (con límite de intentos) |
+| `GET /v1/viewer/tasks?after_version=N&limit≤500` | lectura | Tareas del usuario para esa PC o sin destino → `{tasks, has_more, head_version}`; ver [RELAY_SNAPSHOT_CONTRACT.md](RELAY_SNAPSHOT_CONTRACT.md) |
 | `GET/POST /v1/channels/whatsapp/webhook` | firma Meta | Desactivado sin `WHATSAPP_APP_SECRET` + `WHATSAPP_VERIFY_TOKEN` |
 
 Si no se indica `target_device_id`: se usa el único dispositivo activo; si hay varios,

@@ -1,0 +1,109 @@
+{
+ "schema": "arkos.relay.snapshot",
+ "schema_version": 1,
+ "source": "relay",
+ "generated_at": 1791423939.5477378,
+ "device_id": "dev_b84c7ade358c441b80d509bc7bc37911",
+ "sync": {
+  "status": "fresh",
+  "last_success_at": 1791423939.5467086,
+  "last_attempt_at": 1791423939.5205405,
+  "last_error": null,
+  "stale_after_seconds": 120,
+  "cursor": 8
+ },
+ "limits": {
+  "max_tasks": 500,
+  "max_bytes": 1048576,
+  "preview_chars": 280
+ },
+ "truncated": false,
+ "task_count": 3,
+ "tasks": [
+  {
+   "origin": "relay",
+   "remote_id": "tsk_a17cfc92aeb84fe98fba304fccaf34bc",
+   "version": 5,
+   "action": "video.clip",
+   "state": "approved",
+   "state_reason": "approval:apr_c75c09104f6e4b03abab446ad5a6f54d",
+   "target_device_id": "dev_b84c7ade358c441b80d509bc7bc37911",
+   "for_this_device": true,
+   "created_at": 1791423939.0023212,
+   "updated_at": 1791423939.1295958,
+   "approval_expires_at": 1791427539.1295543,
+   "attempts": 0,
+   "retry_of": null,
+   "payload_sha256": "f67a52afacc1227ad822370354583d9e66f61a506838e751a3c0ee36385a6c13",
+   "summary": {
+    "title": "clip-sintetico.mp4",
+    "root": "videos",
+    "path": "demo/clip-sintetico.mp4",
+    "start_ms": 5000,
+    "duration_ms": 10000
+   },
+   "result": null,
+   "artifact": {
+    "status": "none"
+   }
+  },
+  {
+   "origin": "relay",
+   "remote_id": "tsk_19065a9ed3f247139b7866a31afa5029",
+   "version": 2,
+   "action": "document.create",
+   "state": "awaiting_approval",
+   "state_reason": null,
+   "target_device_id": "dev_b84c7ade358c441b80d509bc7bc37911",
+   "for_this_device": true,
+   "created_at": 1791423938.9935737,
+   "updated_at": 1791423938.9935737,
+   "approval_expires_at": null,
+   "attempts": 0,
+   "retry_of": null,
+   "payload_sha256": "fcf099ce0aca59934dbe53565fe1ae2f922102fe0f64ffdfac96de46306639ae",
+   "summary": {
+    "preview": "# Plan\n- Revisar propuesta\n- Llamar proveedor",
+    "title": "Plan semanal.md"
+   },
+   "result": null,
+   "artifact": {
+    "status": "none"
+   }
+  },
+  {
+   "origin": "relay",
+   "remote_id": "tsk_2442ea96e3f346bd9051dc9df4c2467d",
+   "version": 8,
+   "action": "note.create",
+   "state": "succeeded",
+   "state_reason": "Archivo creado",
+   "target_device_id": "dev_b84c7ade358c441b80d509bc7bc37911",
+   "for_this_device": true,
+   "created_at": 1791423938.984021,
+   "updated_at": 1791423939.4448597,
+   "approval_expires_at": null,
+   "attempts": 1,
+   "retry_of": null,
+   "payload_sha256": "0cae15caa6d2a0d4a25646bff6666a92ea3c488f1c4f54c4aeb3250ddc2ffaae",
+   "summary": {
+    "preview": "Ideas para la reunión del lunes (sintético)",
+    "title": "Ideas para la reunión del lunes (sintético)"
+   },
+   "result": {
+    "message": "Archivo creado",
+    "output": {
+     "name": "tsk_2442ea96e3f346bd9051dc9df4c2467d.md",
+     "sha256": "f6c8bd4802a911b90205429ef7331c2307c181f2475dcf1746719bfb6d91a34a",
+     "bytes": 46
+    }
+   },
+   "artifact": {
+    "status": "available",
+    "relative_path": "notes/tsk_2442ea96e3f346bd9051dc9df4c2467d.md",
+    "sha256": "f6c8bd4802a911b90205429ef7331c2307c181f2475dcf1746719bfb6d91a34a",
+    "bytes": 46
+   }
+  }
+ ]
+}

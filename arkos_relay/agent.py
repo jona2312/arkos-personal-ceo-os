@@ -57,6 +57,19 @@ class HttpTransport:
             raise TransportError(str(exc))
 
 
+    def post_public(self, path, body):
+        """Unauthenticated POST (pairing endpoints); sends no Authorization header."""
+        req = request.Request(self.base_url + path, data=json.dumps(body).encode(), method="POST")
+        req.add_header("Content-Type", "application/json")
+        try:
+            with request.urlopen(req, timeout=self.timeout) as response:
+                return json.loads(response.read())
+        except error.HTTPError as exc:
+            raise ApiError(exc.code, "pairing_failed", exc.read().decode(errors="replace")[:300])
+        except (error.URLError, OSError, TimeoutError) as exc:
+            raise TransportError(str(exc))
+
+
 def pair(base_url, code, allow_insecure_localhost=False, timeout=30):
     transport = HttpTransport(base_url, "", timeout, allow_insecure_localhost)
     req = request.Request(transport.base_url + "/v1/pair", data=json.dumps({"code": code}).encode(), method="POST")
