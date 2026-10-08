@@ -12,7 +12,8 @@ Use a separate checkout of this PR. Do not replace the running Hermes checkout
 or the `arkos-pilot` profile. Start with a disposable state directory:
 
 ```powershell
-./scripts/Start-ArkosTaskCenter.ps1 -StateDirectory 'D:\ARKOS\TaskCenterTrial'
+./scripts/Open-Arkos.ps1 -CheckOnly
+./scripts/Open-Arkos.ps1
 ```
 
 If Python is not on PATH, pass `-PythonPath` with an existing, verified Python
@@ -53,10 +54,10 @@ there is no CORS permission for other origins.
   It explicitly describes itself as a preparer; it does not impersonate an LLM
   conversation. Proposals can be saved as notes, not executed as arbitrary code.
 - **Conexiones:** local notes available; FFmpeg availability detected from PATH;
-  Hermes chat, email, calendar, WhatsApp and remote sync explicitly pending.
-- **Personalización:** dark/light and blue/red/violet/monochrome, stored in the
+  Hermes chat, email, calendar and WhatsApp explicitly pending. The separate relay snapshot reader is available when explicitly configured; it cannot approve or execute remote work.
+- **Personalización:** dark/light, gold/red neural and blue/red/violet/monochrome, stored in the
   current browser. A CSS neon background and orbital core add motion, with
-  pause controls, reduced-motion support and hidden-tab animation pause. Usable
+  pause controls, brightness settings, a lightweight mode, reduced-motion support and hidden-tab animation pause. See [NEURAL_THEME.md](NEURAL_THEME.md). Usable
   at a 390 px mobile viewport, without horizontal scroll.
 - Device clock/date and a page-open timer are real. The timer is elapsed page
   time (including background time), resets on reload, and is not PC uptime or
@@ -126,8 +127,11 @@ mobile overflow, theme persistence, search, pending connections, missing auth an
 disconnection. It then removes its state. Screenshots under `screenshots/` show
 synthetic tasks created through the real UI; they are not Jona's personal data.
 
-See [REMOTE_VIEW_PREPARATION.md](REMOTE_VIEW_PREPARATION.md) for the internal
-read-only remote presentation boundary, not yet connected to a producer.
+See [RELAY_INTEGRATION.md](RELAY_INTEGRATION.md) for the configured read-only snapshot reader. [REMOTE_VIEW_PREPARATION.md](REMOTE_VIEW_PREPARATION.md) records its earlier preparation.
 See [UI_ROADMAP.md](UI_ROADMAP.md) for the new design and prioritized modules.
 See [VALIDATION.md](VALIDATION.md) for observed results and Windows acceptance.
-See [SYNC_CONTRACT_DRAFT.md](SYNC_CONTRACT_DRAFT.md) before implementing a relay.
+The older [SYNC_CONTRACT_DRAFT.md](SYNC_CONTRACT_DRAFT.md) is historical; the relay contract and snapshot contract in the parent docs directory are authoritative for remote tasks.
+
+## Guided Windows trial launch
+
+Use `./scripts/Open-Arkos.ps1 -CheckOnly` to inspect requirements, then `./scripts/Open-Arkos.ps1` to open the center with a separate default trial state and a free loopback port. See [GUIDED_LAUNCHER.md](GUIDED_LAUNCHER.md). Python 3.11+ remains a prerequisite; this is not a bundled installer.
