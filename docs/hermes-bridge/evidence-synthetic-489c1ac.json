@@ -1,0 +1,46 @@
+{
+ "reply_and_proposal": {
+  "status": "ok",
+  "reply": "Te propongo una nota.",
+  "proposals": [
+   {
+    "type": "note",
+    "title": "Agenda",
+    "status": "proposed",
+    "proposal_id": "prp_0b40180f0d0b4562ab295dde"
+   }
+  ],
+  "diagnostics": {
+   "provider": "custom",
+   "endpoint": "loopback",
+   "tools_offered": 0,
+   "hermes_commit": "489c1ac298f8ed13ccd688c97e4097f161046c0b",
+   "model": "synthetic",
+   "tool_attempts_blocked": 0,
+   "tool_starts": 0,
+   "blocked_connections": 0,
+   "elapsed_ms": 2939,
+   "proposals_rejected": 0
+  },
+  "requests_with_tools_field": 0,
+  "model_requests": 1
+ },
+ "tool_call_refused": {
+  "status": "ok",
+  "reply": "No puedo ejecutar comandos; puedo proponer una nota.",
+  "tool_attempts_blocked": 1,
+  "tool_starts": 0,
+  "hermes_tool_reply": [
+   "Tool 'terminal' does not exist. Available tools:"
+  ],
+  "marker_created": false,
+  "requests_with_tools_field": 0
+ },
+ "managed_local_missing": {
+  "status": "error",
+  "error": {
+   "code": "provider_unavailable",
+   "message": "ProviderNotConfiguredError: Provider 'llamacpp' is set in config.yaml but no local llama.cpp server is running. Start it in Settings → Providers → Local models, or switch to a different provider with `hermes model`."
+  }
+ }
+}
