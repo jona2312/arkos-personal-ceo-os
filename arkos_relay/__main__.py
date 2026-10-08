@@ -14,8 +14,20 @@ def default_agent_dir():
     return Path(base) / "ArkosRelayAgent"
 
 
+def safe_console():
+    """Windows consoles/pipes may use cp1252: never crash on characters it lacks.
+
+    JSON output is printed ASCII-escaped (always valid and encodable); other
+    unencodable characters in messages are backslash-escaped instead of raising.
+    """
+    for stream in (sys.stdout, sys.stderr):
+        if hasattr(stream, "reconfigure") and (stream.errors or "strict") == "strict":
+            stream.reconfigure(errors="backslashreplace")
+
+
 def main(argv=None):
-    parser = argparse.ArgumentParser(prog="arkos_relay", description="ARKOS: cola persistente celular → PC")
+    safe_console()
+    parser = argparse.ArgumentParser(prog="arkos_relay", description="ARKOS: cola persistente celular -> PC")
     sub = parser.add_subparsers(dest="command", required=True)
 
     serve = sub.add_parser("serve", help="Servidor de recepción y sincronización")
@@ -125,14 +137,14 @@ def run_agent(args):
             raise ValueError("Debe ser una carpeta existente")
         config.setdefault("roots", {})[args.name] = str(path)
         _save_config(state_dir, config)
-        print(json.dumps(config["roots"], indent=2, ensure_ascii=False))
+        print(json.dumps(config["roots"], indent=2))
         return 0
     if not config.get("device_id"):
         raise ValueError("Primero vincular: agent pair --server URL --code CODIGO")
     journal = ag.Journal(state_dir / "journal.sqlite3")
     try:
         if args.agent_command == "status":
-            print(json.dumps({"config": config, "pending": [dict(r) for r in journal.pending()]}, indent=2, ensure_ascii=False))
+            print(json.dumps({"config": config, "pending": [dict(r) for r in journal.pending()]}, indent=2))
             return 0
         transport = ag.HttpTransport(config["server"], ag.load_secret(state_dir / "device.token"),
                                      allow_insecure_localhost=config.get("allow_insecure_localhost", False))
