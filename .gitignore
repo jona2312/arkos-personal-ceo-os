@@ -35,3 +35,5 @@ __pycache__/
 *.pyc
 .arkos-state/
 n8n/workflows/deploy/
+.arkos-relay/
+*.sqlite3

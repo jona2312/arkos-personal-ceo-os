@@ -119,7 +119,7 @@ a configuración del modelo, Windows y pruebas; no equivale a producto comercial
 | 4 / jornada 2–3 | UI simple, historial, cancelar y retomar al iniciar | Cerrar/reabrir conserva encargos; muestra resultado/error verificable |
 | 5 / después del piloto | Catálogo instalable con versión, fuente y revisión | Consentimiento concreto instala una herramienta y se comprueba su funcionamiento |
 | 6 | Browser y primer MCP (Blender o Home Assistant) | Una tarea representativa funciona con permisos mínimos y resultado verificable |
-| 7 | Relay nube + móvil y tareas cuando PC está apagada | Emparejamiento autenticado, aislamiento por usuario, deduplicación y entrega al reconectar |
+| 7 | Relay nube + móvil y tareas cuando PC está apagada ([contrato e implementación](RELAY_CONTRACT.md)) | Emparejamiento autenticado, aislamiento por usuario, deduplicación y entrega al reconectar |
 | 8 | Cobros, cuotas, ElevenLabs y actualizaciones firmadas | Medición de costes, límites aplicados y recuperación/rollback probado |
 
 La base WhatsApp/n8n es otra vía existente que requiere sus pruebas y revisión
