@@ -4,7 +4,9 @@ writes one JSON response on stdout. Started by arkos_hermes.bridge with ``python
 Guarantees are enforced in code, not by the prompt:
 - AIAgent(enabled_toolsets=[]) and a verified empty tool list before and after the turn;
 - provider fixed to Hermes' managed local llama.cpp, no fallback chain;
-- every non-loopback socket connection is refused for the whole process;
+- non-loopback connections through Python's socket.connect/connect_ex are refused in this
+  interpreter (a second layer, not OS isolation: child processes, native code and DNS are
+  not covered; see docs/HERMES_BRIDGE.md §3.1);
 - user plugins in HERMES_HOME are refused (they would run code at import time).
 The runner never reads .env, tokens or the managed runtime state itself: Hermes resolves
 its own local endpoint internally.
@@ -34,7 +36,7 @@ def is_loopback(host):
 
 
 def install_network_guard():
-    """Refuse any outbound connection that is not loopback (cloud providers, web, telemetry)."""
+    """Refuse non-loopback socket.connect/connect_ex in this interpreter. Not OS-level isolation."""
     original = socket.socket.connect
     original_ex = socket.socket.connect_ex
     blocked = []

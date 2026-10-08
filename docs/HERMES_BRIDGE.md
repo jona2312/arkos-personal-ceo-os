@@ -60,8 +60,10 @@ responda bien; la separación la imponen el código y las comprobaciones de abaj
    - proveedor `llamacpp`;
    - `base_url` en loopback;
    - sin cadena de fallback y sin fallback activado.
-3. Bloquea toda conexión no-loopback a nivel socket, en todo el proceso. Ni un proveedor en
-   la nube ni la web son alcanzables aunque estén configurados.
+3. Bloquea las conexiones no-loopback que pasan por `socket.connect`/`connect_ex` de Python
+   en el proceso del runner. Así, un proveedor en la nube o la web configurados en Hermes no
+   se alcanzan por los clientes HTTP de Python. **No es un aislamiento del sistema operativo:**
+   ver §3.1.
 4. Rechaza perfiles con plugins de usuario, porque su código se ejecutaría al importar
    Hermes. Quita `HERMES_KANBAN_TASK`, que reintroduce el toolset kanban.
 5. Si alguna herramienta llega a iniciarse (`tool_start_callback`), devuelve error.
@@ -70,9 +72,38 @@ responda bien; la separación la imponen el código y las comprobaciones de abaj
    - recibe un entorno mínimo, sin variables de proveedores ni tokens;
    - trabaja en un directorio vacío (Hermes inspecciona el cwd con git y `AGENTS.md`);
    - usa el stdout real solo para una línea JSON; los prints de Hermes van a stderr.
-7. El proceso padre (`arkos_hermes/bridge.py`) aplica el timeout, cancela matando el
-   proceso, limita la salida a 1 MiB y vuelve a validar la respuesta, incluido el hash de
-   cada propuesta.
+7. El proceso padre (`arkos_hermes/bridge.py`):
+   - **Un pedido activo por `request_id`:** un segundo pedido con el mismo ID mientras el
+     primero corre se rechaza con `duplicate_request`. Cada ejecución tiene su propio estado,
+     y `cancel(id)` solo afecta a la ejecución registrada con ese ID.
+   - **Salida limitada durante la lectura:** stdout ≤ 1 MiB y stderr ≤ 256 KiB, leídos por
+     bloques en hilos aparte. Al exceder cualquiera de los dos se detiene el proceso y se
+     responde `output_invalid`, sin esperar el timeout. stderr se descarta y no se muestra.
+   - **Respuestas sin éxito sin contenido:** en `error`, `timeout` y `cancelled`, `reply` debe
+     ser `""` y `proposals` `[]`. Si el runner devuelve otra cosa, la respuesta se rechaza
+     (`output_invalid`).
+   - Aplica el timeout, cancela matando el proceso y vuelve a validar la respuesta, incluido
+     el hash de cada propuesta.
+
+### 3.1 Qué NO garantiza el bloqueo de sockets
+
+El bloqueo reemplaza `socket.socket.connect`/`connect_ex` dentro del intérprete del runner.
+No cubre:
+- **Procesos hijos.** Hermes lanza sondas locales (`git`, `pip`, `uname`). Cualquier
+  subproceso tiene su propia red, sin el bloqueo.
+- **Código nativo** (extensiones C, `ctypes`, librerías que abren sockets sin pasar por el
+  módulo `socket` de Python) ni otros mecanismos de E/S de red.
+- **DNS.** `getaddrinfo` no se bloquea: un nombre puede llegar a resolverse aunque la
+  conexión posterior se rechace.
+- **Lectura de archivos.** Hermes lee su configuración y su `.env` del perfil, y el texto del
+  pedido viaja al llama.cpp local.
+
+Las garantías principales siguen siendo las de código: cero herramientas, proveedor local y
+sin fallback. El bloqueo de sockets es una segunda capa. Para un aislamiento real hace falta
+una medida del sistema operativo, que queda pendiente y para decidir con Jona:
+- una regla saliente del Firewall de Windows que bloquee el `python.exe` privado de Hermes
+  salvo loopback;
+- o un usuario o AppContainer dedicado sin acceso a red.
 
 Lo que Hermes **sí escribe** en el `HERMES_HOME` del puente: `logs/`, `cache/` y un
 `SOUL.md` por defecto (observado en la prueba). Por eso debe ser un perfil dedicado.
@@ -100,7 +131,8 @@ Lo que Hermes **sí escribe** en el `HERMES_HOME` del puente: `logs/`, `cache/` 
                  "proposals_rejected": 0},
  "error": {"code": "…", "message": "…"}}
 ```
-- `status`: `ok`, `error`, `timeout` o `cancelled`. `error` solo aparece si no es `ok`.
+- `status`: `ok`, `error`, `timeout` o `cancelled`. `error` solo aparece si no es `ok`. Si no
+  es `ok`, `reply` es `""` y `proposals` es `[]`: nunca hay contenido utilizable.
 - `reply`: hasta 8000 caracteres.
 - `proposals`: hasta 3, solo `type: note`, `text` ≤ 20000 y `title` ≤ 120. `status` siempre
   es `proposed`.
@@ -117,6 +149,7 @@ Eso es un paso futuro de la pantalla y este prototipo no lo hace.
 | Código | Significado |
 |---|---|
 | `invalid_request` | La entrada viola el contrato |
+| `duplicate_request` | Ya hay un pedido activo con ese `request_id`; el activo no se toca |
 | `unsafe_configuration` | Herramientas presentes, proveedor no local, fallback, plugins de usuario o endpoint sintético fuera de pruebas |
 | `provider_unavailable` | El llama.cpp gestionado no está corriendo o no está configurado; **no hay respaldo** |
 | `model_error` | Hermes o el modelo no completaron el turno |
@@ -143,9 +176,19 @@ Eso es un paso futuro de la pantalla y este prototipo no lo hace.
 - **Cancelación:** `interrupt()` corta la espera del modelo en ~1,2 s.
 
 Pruebas: `tests/test_hermes_bridge.py`.
-- Contrato y procesos: 9 pruebas que siempre corren.
+- Contrato, respuestas sin éxito y procesos: 17 pruebas que siempre corren. Incluyen `request_id`
+  duplicado, cancelación aislada entre pedidos, stdout y stderr continuos detenidos por
+  presupuesto, y respuestas sin éxito con contenido.
 - Integración contra Hermes real: 7 pruebas que corren con `ARKOS_HERMES_PYTHON` y
   `ARKOS_HERMES_SOURCE`.
+
+Reproducción previa a la corrección (`7313e91`):
+- Dos pedidos simultáneos con el mismo ID terminaban `ok` y `cancelled`, sin que nadie
+  cancelara.
+- Un runner con salida continua acumuló ~3,8 GiB en 10 s y terminó como `timeout`.
+- `validate_response` aceptaba un `error` con texto y propuestas.
+
+Las regresiones nuevas fallan sobre ese código y pasan con la corrección.
 
 ## 6. Aceptación en la PC (no ejecutada)
 
@@ -159,10 +202,10 @@ git -C D:\ARKOS\hermes\hermes-agent rev-parse HEAD           # esperado 489c1ac2
 git -C D:\ARKOS\hermes\hermes-agent diff --stat -- '*.py'     # esperado: vacío
 & $hermesPython -c "import sys; print(sys.version)"          # 3.14.x
 cd C:\ArkosReview\bridge
-python -m unittest tests.test_hermes_bridge -v                # 9 OK, 7 skipped
+python -m unittest tests.test_hermes_bridge -v                # 17 OK, 7 skipped
 $env:ARKOS_HERMES_PYTHON = (Get-Command $hermesPython).Source
 $env:ARKOS_HERMES_SOURCE = 'D:\ARKOS\hermes\hermes-agent'
-python -m unittest tests.test_hermes_bridge -v                # 16 OK; usa HERMES_HOME temporal y modelo sintético
+python -m unittest tests.test_hermes_bridge -v                # 24 OK; usa HERMES_HOME temporal y modelo sintético
 ```
 
 **B. Conexión real (requiere tu aprobación explícita: crea un perfil nuevo dentro de

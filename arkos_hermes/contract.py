@@ -17,11 +17,13 @@ MAX_PROPOSALS = 3
 MAX_NOTE_CHARS = 20000
 MAX_TITLE_CHARS = 120
 MIN_TIMEOUT, DEFAULT_TIMEOUT, MAX_TIMEOUT = 10, 120, 300
-MAX_STDOUT_BYTES = 1024 * 1024
+MAX_STDOUT_BYTES = 1024 * 1024   # enforced while reading; the runner is stopped past it
+MAX_STDERR_BYTES = 256 * 1024    # Hermes diagnostics: drained and counted, never stored or shown
 
 STATUSES = ("ok", "error", "timeout", "cancelled")
 ERROR_CODES = (
     "invalid_request",        # input violates this contract
+    "duplicate_request",      # another request with the same request_id is still active
     "unsafe_configuration",   # tools present, non-local provider, fallback chain or user plugins
     "provider_unavailable",   # managed local llama.cpp not running / not configured
     "model_error",            # Hermes/model failed the turn
@@ -131,6 +133,8 @@ def parse_reply(raw):
 def response(request_id, status, reply="", proposals=(), diagnostics=None, error=None):
     if status not in STATUSES:
         raise ValueError(status)
+    if status != "ok" and (reply or proposals):
+        raise ValueError("Una respuesta sin éxito no lleva texto ni propuestas utilizables")
     body = {"v": BRIDGE_VERSION, "request_id": request_id, "status": status, "reply": reply,
             "proposals": list(proposals), "diagnostics": diagnostics or {}}
     if error:
@@ -154,6 +158,9 @@ def validate_response(body, request_id):
             raise BridgeError("output_invalid", "Propuesta inválida")
     if body["status"] == "ok" and body.get("error"):
         raise BridgeError("output_invalid", "Estado inconsistente")
+    if body["status"] != "ok" and (body["reply"] or body["proposals"]):
+        # error/timeout/cancelled must never carry text or proposals the screen could use.
+        raise BridgeError("output_invalid", "Una respuesta sin éxito no puede traer texto ni propuestas")
     if body["status"] != "ok" and (not isinstance(body.get("error"), dict) or body["error"].get("code") not in ERROR_CODES):
         raise BridgeError("output_invalid", "Error sin código válido")
     return body

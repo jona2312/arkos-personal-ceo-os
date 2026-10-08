@@ -79,6 +79,34 @@ class ContractTests(unittest.TestCase):
                 c.validate_response(body, "req-bridge-0001")
 
 
+class NonSuccessContentTests(unittest.TestCase):
+    """error / timeout / cancelled must never carry text or proposals the screen could use."""
+
+    def test_builder_refuses_content_on_failures(self):
+        _, proposals, _ = c.parse_reply(block({"type": "note", "text": "Usable"}))
+        for status in ("error", "timeout", "cancelled"):
+            with self.assertRaises(ValueError):
+                c.response("req-bridge-0001", status, reply="texto", error=("model_error", "x"))
+            with self.assertRaises(ValueError):
+                c.response("req-bridge-0001", status, proposals=proposals, error=("model_error", "x"))
+
+    def test_validator_refuses_content_on_failures(self):
+        _, proposals, _ = c.parse_reply(block({"type": "note", "text": "Usable"}))
+        for status, code in (("error", "model_error"), ("timeout", "timeout"), ("cancelled", "cancelled")):
+            base = c.response("req-bridge-0001", status, error=(code, "x"))
+            self.assertEqual(c.validate_response(json.loads(json.dumps(base)), "req-bridge-0001")["status"], status)
+            for field, value in (("reply", "texto utilizable"), ("proposals", proposals)):
+                with self.subTest(status=status, field=field):
+                    body = json.loads(json.dumps(base)); body[field] = value
+                    with self.assertRaises(c.BridgeError):
+                        c.validate_response(body, "req-bridge-0001")
+
+
+OK_AFTER = ("import json,sys,time; r=json.load(sys.stdin); time.sleep({delay});"
+            "print(json.dumps({{'v':1,'request_id':r['request_id'],'status':'ok','reply':'hola '+r['request_id'],"
+            "'proposals':[],'diagnostics':{{}}}}))")
+
+
 class ProcessTests(unittest.TestCase):
     """Bridge process handling with a stand-in runner (no Hermes)."""
 
@@ -122,6 +150,64 @@ class ProcessTests(unittest.TestCase):
             with self.subTest(script=script[:40]):
                 result = self.bridge(script).converse(request())
                 self.assertEqual((result["status"], result["error"]["code"]), ("error", code))
+
+    def test_duplicate_active_request_id_is_rejected(self):
+        bridge = self.bridge(OK_AFTER.format(delay=3))
+        results = {}
+        first = threading.Thread(target=lambda: results.setdefault("first", bridge.converse(request())))
+        first.start()
+        time.sleep(1.0)
+        results["second"] = bridge.converse(request())
+        first.join()
+        self.assertEqual((results["second"]["status"], results["second"]["error"]["code"]), ("error", "duplicate_request"))
+        self.assertEqual((results["first"]["status"], results["first"]["reply"]), ("ok", "hola req-bridge-0001"))
+        # Once the first one finished, the id can be used again.
+        self.assertEqual(bridge.converse(request())["status"], "ok")
+
+    def test_cancel_affects_only_its_own_request(self):
+        bridge = self.bridge(OK_AFTER.format(delay=4))
+        results = {}
+        threads = [threading.Thread(target=lambda rid=rid: results.setdefault(rid, bridge.converse(request(rid=rid))))
+                   for rid in ("req-bridge-aaaa", "req-bridge-bbbb")]
+        for thread in threads:
+            thread.start()
+        time.sleep(1.0)
+        self.assertTrue(bridge.cancel("req-bridge-aaaa"))
+        self.assertFalse(bridge.cancel("req-bridge-zzzz"))  # unknown id cancels nothing
+        for thread in threads:
+            thread.join()
+        self.assertEqual(results["req-bridge-aaaa"]["status"], "cancelled")
+        self.assertEqual(results["req-bridge-aaaa"]["reply"], "")
+        self.assertEqual((results["req-bridge-bbbb"]["status"], results["req-bridge-bbbb"]["reply"]), ("ok", "hola req-bridge-bbbb"))
+
+    def test_continuous_stdout_is_stopped_at_budget(self):
+        bridge = self.bridge("import sys\nwhile True:\n    sys.stdout.buffer.write(b'x' * 65536); sys.stdout.flush()")
+        start = time.monotonic()
+        result = bridge.converse(request(timeout=60))
+        self.assertEqual((result["status"], result["error"]["code"]), ("error", "output_invalid"))
+        self.assertIn("stdout", result["error"]["message"])
+        self.assertLess(time.monotonic() - start, 15, "must stop on budget, not wait for the timeout")
+
+    def test_continuous_stderr_is_stopped_at_budget(self):
+        bridge = self.bridge("import sys\nwhile True:\n    sys.stderr.buffer.write(b'e' * 65536); sys.stderr.flush()")
+        start = time.monotonic()
+        result = bridge.converse(request(timeout=60))
+        self.assertEqual((result["status"], result["error"]["code"]), ("error", "output_invalid"))
+        self.assertIn("stderr", result["error"]["message"])
+        self.assertLess(time.monotonic() - start, 15)
+
+    def test_stderr_within_budget_is_not_returned(self):
+        script = ("import json,sys; r=json.load(sys.stdin); sys.stderr.write('Traceback secreto D:\\\\ARKOS'*100);"
+                  "print(json.dumps({'v':1,'request_id':r['request_id'],'status':'ok','reply':'hola','proposals':[],'diagnostics':{}}))")
+        result = self.bridge(script).converse(request())
+        self.assertEqual(result["status"], "ok")
+        self.assertNotIn("Traceback", json.dumps(result))
+
+    def test_runner_error_with_usable_content_is_rejected(self):
+        script = ("import json,sys; r=json.load(sys.stdin); print(json.dumps({'v':1,'request_id':r['request_id'],'status':'error',"
+                  "'reply':'igual te dejo esto','proposals':[],'diagnostics':{},'error':{'code':'model_error','message':'x'}}))")
+        result = self.bridge(script).converse(request())
+        self.assertEqual((result["status"], result["error"]["code"], result["reply"]), ("error", "output_invalid", ""))
 
     def test_environment_does_not_forward_secrets(self):
         os.environ["OPENROUTER_API_KEY"] = "sk-synthetic"; os.environ["API_SERVER_KEY"] = "synthetic"
