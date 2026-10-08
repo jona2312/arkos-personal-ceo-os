@@ -7,16 +7,22 @@ Rama de integración de la interfaz #3 con el productor #4 (`faee05b`). El dise�
 Primero vincular el lector y ejecutar `agent view-sync` según `docs/RELAY_SNAPSHOT_CONTRACT.md`. El usuario debe autorizar el lector; esta pantalla no emite credenciales ni inicia ese proceso.
 
 ```powershell
-./scripts/Start-ArkosTaskCenter.ps1 -StateDirectory 'D:\ARKOS\TaskCenterTrial' -RelaySnapshot "$env:LOCALAPPDATA\ArkosRelayAgent\viewer\relay-snapshot.json" -RelayDeviceId 'dev_REEMPLAZAR_CON_ID_REAL'
+# Después de vincular el agente, usando su carpeta de estado por defecto:
+$relayDeviceId = (Get-Content "$env:LOCALAPPDATA\ArkosRelayAgent\agent.json" -Raw | ConvertFrom-Json).device_id
+./scripts/Start-ArkosTaskCenter.ps1 -StateDirectory "$env:LOCALAPPDATA\ArkosTaskCenterTrial" -RelaySnapshot "$env:LOCALAPPDATA\ArkosRelayAgent\viewer\relay-snapshot.json" -RelayDeviceId $relayDeviceId
 ```
+
+Si el agente se vinculó con una carpeta de estado distinta, usá su `agent.json` y el snapshot correspondiente. Estos comandos no instalan el agente ni lo vinculan. Para la aceptación no usar `D:\ARKOS`: conservar el checkout y el estado de prueba separados de la instalación existente.
 
 Los dos parámetros de lectura son opcionales pero se deben proporcionar juntos. El ID real tiene prefijo `dev_` y 32 caracteres hexadecimales. Sin configuración se mantiene la pantalla local y el aviso «Conexión pendiente». No hay búsqueda automática de archivos, lectura de tokens ni llamadas al relay desde la interfaz.
 
 ## Comportamiento
 
-El endpoint privado `/api/remote-view` lee y cierra el archivo en cada actualización. Limita la lectura a 1 MiB y 500 tarjetas, valida esquema, versión, origen, identificadores, estados y destino esperado. Un archivo ausente, mal formado o de otro dispositivo devuelve una vista vacía «Sin información disponible», sin revelar rutas ni errores del sistema. Reemplazar el archivo con uno válido recupera la vista en la próxima actualización.
+El endpoint privado `/api/remote-view` lee y cierra el archivo en cada actualización. Limita la lectura a 1 MiB y 500 tarjetas, acepta solo UTF-8 sin BOM y valida esquema, versión, origen, identificadores, estados y destino esperado. Un archivo ausente, mal formado o de otro dispositivo devuelve una vista vacía «Sin información disponible», sin revelar rutas ni errores del sistema. Reemplazar el archivo con uno válido recupera la vista en la próxima actualización.
 
 Los nueve estados se muestran separados. `claimed` indica reserva, no ejecución. `unknown` requiere revisión y nunca activa un reintento. Se recalcula la frescura con el reloj del lector: pasado el límite del productor (máximo 120 s), o con una fecha futura, no se muestra como sincronizado. `offline` conserva la copia con aviso; `unauthorized` y `never_synced` ocultan las tarjetas. Una copia truncada tiene un aviso visible. La frescura no prueba que la PC ejecutora esté conectada.
+
+Acoplamiento explícito del contrato v1: el productor escribe `stale_after_seconds: 120` y el lector admite límites positivos de hasta 120 s. Mantener `agent view-sync --interval` por debajo de ese límite (por defecto 30 s); la latencia o los fallos de conexión igualmente pueden volver stale la copia. Un cambio del límite exige actualizar y probar ambos extremos.
 
 Solo se proyectan campos necesarios para mostrar las tarjetas. No se entregan parámetros, rutas, hashes de aprobación ni credenciales al navegador. El texto se muestra con `textContent`. Los resultados son metadatos; no se abren, verifican ni descargan archivos remotos. Que el productor marque `available` no significa que esta pantalla haya comprobado su SHA-256.
 

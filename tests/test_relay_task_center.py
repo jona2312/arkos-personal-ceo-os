@@ -102,3 +102,11 @@ class RelayTaskCenterTests(ViewerFixture, unittest.TestCase):
         self.assertEqual(read_view()['sync_status'], 'not_configured')
         with self.assertRaises(ValueError):
             TaskCenter(self.dir / 'invalid', relay_snapshot=self.path)
+
+    def test_only_utf8_without_bom_is_accepted(self):
+        content = json.dumps(self.snapshot, ensure_ascii=False)
+        for data in (content.encode('utf-16'), content.encode('utf-32'), b'\xef\xbb\xbf' + content.encode('utf-8'), b'\xff'):
+            self.path.write_bytes(data)
+            self.assertEqual(self.view()['sync_status'], 'unavailable')
+        self.path.write_bytes(content.encode('utf-8'))
+        self.assertEqual(self.view()['sync_status'], 'current')

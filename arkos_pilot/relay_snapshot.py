@@ -79,7 +79,7 @@ def read_view(path=None, device_id=None, now=None):
             data = stream.read(MAX_BYTES + 1)
         if len(data) > MAX_BYTES:
             raise ValueError('Oversized file')
-        return project(json.loads(data), device_id, time.time() if now is None else now)
+        return project(json.loads(data.decode('utf-8')), device_id, time.time() if now is None else now)
     except (OSError, ValueError, TypeError, KeyError, OverflowError, RecursionError):
         # Never expose configured paths, raw payloads or filesystem errors.
         return empty('unavailable')
