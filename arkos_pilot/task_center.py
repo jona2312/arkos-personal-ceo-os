@@ -117,7 +117,7 @@ class Handler(BaseHTTPRequestHandler):
         path = urlsplit(self.path).path
         if not self.allowed(private=path.startswith('/api/')):
             return
-        static = {'/': ('index.html', 'text/html; charset=utf-8'), '/app.js': ('app.js', 'text/javascript; charset=utf-8'), '/remote-view.js': ('remote-view.js', 'text/javascript; charset=utf-8'), '/style.css': ('style.css', 'text/css; charset=utf-8'), '/mark.svg': ('mark.svg', 'image/svg+xml')}
+        static = {'/': ('index.html', 'text/html; charset=utf-8'), '/app.js': ('app.js', 'text/javascript; charset=utf-8'), '/neural.js': ('neural.js', 'text/javascript; charset=utf-8'), '/remote-view.js': ('remote-view.js', 'text/javascript; charset=utf-8'), '/style.css': ('style.css', 'text/css; charset=utf-8'), '/mark.svg': ('mark.svg', 'image/svg+xml')}
         try:
             if path in static:
                 name, mime = static[path]

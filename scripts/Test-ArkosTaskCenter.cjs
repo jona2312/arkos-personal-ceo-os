@@ -19,6 +19,10 @@ async function main(){
   await page.goto(url);
   await page.getByText('Esta PC · conectada',{exact:true}).waitFor();
   assert.equal(await page.locator('.task-card').count(),0);
+  assert.equal(await page.locator('html').getAttribute('data-accent'),'neural');
+  assert.equal(await page.locator('.neural-network').count(),1);
+  assert.equal(await page.locator('html').getAttribute('data-activity'),'idle');
+  assert.equal(await page.locator('.neural-signals').evaluate(el=>getComputedStyle(el).animationPlayState),'paused');
   async function createNote(text){await page.getByRole('button',{name:'Nueva tarea'}).first().click();await page.getByLabel('Contenido de la nota').fill(text);await page.getByRole('button',{name:'Guardar tarea',exact:true}).click();await page.locator('#task-dialog').waitFor({state:'hidden'});}
   const content='Plan para mañana\n1. Revisar la propuesta\n2. Organizar documentos\n3. Preparar la reunión';
   await createNote(content);
@@ -84,7 +88,7 @@ async function main(){
   await page.evaluate(()=>{document.activeElement.blur();window.scrollTo(0,0);});
   await page.screenshot({path:path.join(evidence,'desktop-light.png'),fullPage:true});
   await page.getByRole('button',{name:'Personalizar apariencia',exact:true}).click();
-  await page.getByRole('button',{name:'Oscuro',exact:false}).click();await page.getByRole('button',{name:'Azul',exact:true}).click();
+  await page.getByRole('button',{name:'Oscuro',exact:false}).click();await page.getByRole('button',{name:'Dorado y rojo',exact:true}).click();
   await page.locator('#appearance-dialog').getByRole('button',{name:'Cerrar',exact:true}).click();
   await page.getByRole('button',{name:'Personalizar apariencia',exact:true}).click();
   await page.getByRole('button',{name:'Pausado',exact:true}).click();
@@ -99,6 +103,26 @@ async function main(){
   await page.emulateMedia({reducedMotion:'reduce'});
   assert.equal(await page.locator('.ring-one').evaluate(el=>getComputedStyle(el).animationName),'none');
   await page.emulateMedia({reducedMotion:'no-preference'});
+  await page.getByRole('button',{name:'Personalizar apariencia',exact:true}).click();
+  await page.getByRole('button',{name:'Intenso',exact:true}).click();
+  await page.getByRole('button',{name:'Ligero',exact:true}).click();
+  await page.locator('#appearance-dialog').getByRole('button',{name:'Cerrar',exact:true}).click();
+  await page.reload();await page.getByText('Esta PC · conectada',{exact:true}).waitFor();
+  assert.equal(await page.locator('html').getAttribute('data-glow'),'high');
+  assert.equal(await page.locator('html').getAttribute('data-quality'),'lite');
+  assert.equal(await page.locator('.ring-one').evaluate(el=>getComputedStyle(el).animationName),'none');
+  await page.getByRole('button',{name:'Personalizar apariencia',exact:true}).click();
+  await page.getByRole('button',{name:'Sin fondo',exact:true}).click();
+  assert.equal(await page.locator('.ambient').evaluate(el=>getComputedStyle(el).display),'none');
+  await page.getByRole('button',{name:'Suave',exact:true}).click();
+  await page.getByRole('button',{name:'Completo',exact:true}).click();
+  await page.locator('#appearance-dialog').getByRole('button',{name:'Cerrar',exact:true}).click();
+  const mobileDefault=await browser.newContext({viewport:{width:390,height:844}});
+  const mobilePage=await mobileDefault.newPage();await mobilePage.goto(url);
+  await mobilePage.waitForFunction(()=>document.getElementById('device-label').textContent==='Esta PC · conectada');
+  assert.equal(await mobilePage.locator('html').getAttribute('data-quality'),'lite');
+  await mobileDefault.close();
+
   await page.setViewportSize({width:390,height:844});
   await page.evaluate(()=>{document.activeElement.blur();window.scrollTo(0,0);});
   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
@@ -118,6 +142,21 @@ async function main(){
   await page.locator('[data-page="connections"]').click();
   assert.match(await page.locator('#connections-grid').textContent(),/WhatsApp/);
   assert.match(await page.locator('#connections-grid').textContent(),/Sincronización pendiente/);
+  // Synthetic local state response checks visuals only, not executor telemetry.
+  const localTasks=await page.evaluate(async()=>{const r=await fetch('/api/tasks',{headers:{'X-Arkos-Key':sessionStorage.getItem('arkos-session-key')}});return r.json();});
+  const runningFixture={tasks:[{...localTasks.tasks[0],state:'running'}]};
+  await page.route('**/api/tasks',route=>route.fulfill({json:runningFixture}));
+  await page.getByRole('button',{name:'Actualizar tareas',exact:true}).click();
+  await page.waitForFunction(()=>document.documentElement.dataset.activity==='running');
+  assert.equal(await page.locator('.neural-signals').evaluate(el=>getComputedStyle(el).animationPlayState),'running');
+  await page.emulateMedia({reducedMotion:'reduce'});
+  assert.equal(await page.locator('.neural-signals').evaluate(el=>getComputedStyle(el).animationName),'none');
+  await page.emulateMedia({reducedMotion:'no-preference'});
+  runningFixture.tasks[0].state='completed';
+  await page.getByRole('button',{name:'Actualizar tareas',exact:true}).click();
+  await page.waitForFunction(()=>document.documentElement.dataset.activity==='completed');
+  await page.unroute('**/api/tasks');
+  await page.getByRole('button',{name:'Actualizar tareas',exact:true}).click();
   // Controlled synthetic transport projection; not a deployed relay.
   await page.locator('[data-page="home"]').click();
   assert.match(await page.locator('#remote-view').textContent(),/Conexión pendiente/);
