@@ -7,6 +7,13 @@ resultado. La PC no abre puertos; Hermes y la terminal no se exponen.
 
 Estado: código y pruebas con datos sintéticos. **No desplegado.**
 
+Límites explícitos de esta versión:
+- **El relay almacena y transporta el texto de las tareas en texto plano.** Hay TLS en
+  tránsito y no hay cifrado de extremo a extremo.
+- **WhatsApp no tiene emisor:** el adaptador solo encola respuestas en `channel_outbox`
+  y está desactivado por defecto.
+- Ver también la [alineación con el Task Center (PR #3)](RELAY_TASK_CENTER_ALIGNMENT.md).
+
 ```
 Celular / WhatsApp ──HTTPS──▶ Relay (API + SQLite) ◀──HTTPS saliente── Agente Windows
    crea, aprueba,             cola, aprobaciones,          claim → start → ejecuta
@@ -145,7 +152,7 @@ Verificado el 7 de octubre de 2026 con consultas de solo lectura.
 | Pieza | En Git | Desplegado | Reutilización |
 |---|---|---|---|
 | `arkos_pilot` (cola local, FFmpeg) | Sí (PR #1) | En la PC de Jona, solo como CLI | Se reutilizan `execute`/`file_digest` para recortes. Su cola local no se usa como fuente de verdad remota, para evitar dos autoridades de aprobación. |
-| Supabase `arkos-ceo` (migraciones 001–010) | Sí | **Sí**: proyecto activo, 10 migraciones aplicadas, 1 usuario, 0 aprobaciones | `users` se puede mapear a `user_id`. `arkos_approvals` no sirve tal cual: le faltan hash, consumo único y vínculo con la tarea. **RLS está desactivado en las 9 tablas** (aviso crítico de Supabase). |
+| Supabase (migraciones 001–010) | Sí | Hay un proyecto existente; su estado de seguridad se informó fuera de este repositorio público | `users` se puede mapear a `user_id`. `arkos_approvals` no sirve tal cual: le faltan hash, consumo único y vínculo con la tarea. Endurecimiento propuesto, sin aplicar: [SUPABASE_RLS_HARDENING_PROPOSAL.md](security/SUPABASE_RLS_HARDENING_PROPOSAL.md). |
 | n8n (8 workflows, `N8N_BASE_URL`) | Sí | No verificado desde aquí | El emisor de WhatsApp puede drenar `channel_outbox`. |
 | WhatsApp Cloud API | Documentación | La app de Meta figura pendiente en el ROADMAP | Adaptador listo, desactivado. |
 | Hermes Desktop | Parches y evidencia | En la PC de Jona | No se integra ni se expone. |
