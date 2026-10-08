@@ -227,14 +227,14 @@ class Handler(BaseHTTPRequestHandler):
             self.json(409, {'error': 'No se pudo completar la operación local. Revisá el archivo o actualizá las tareas antes de volver a intentar.'})
 
 
-def main():
+def main(argv=None):
     parser = argparse.ArgumentParser(description='Centro de tareas ARKOS, solo en esta PC')
     parser.add_argument('--state-dir', type=Path, required=True, help='Carpeta de estado explícita; usar una carpeta de prueba al comenzar')
     parser.add_argument('--port', type=int, default=8765)
     parser.add_argument('--no-browser', action='store_true')
     parser.add_argument('--relay-snapshot', type=Path, help='Snapshot de lectura explícito; no se busca automáticamente')
     parser.add_argument('--relay-device-id', help='Dispositivo esperado en el snapshot')
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
     try:
         server = TaskCenter(args.state_dir, args.port, args.relay_snapshot, args.relay_device_id)
     except ValueError as exc:
