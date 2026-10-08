@@ -4,9 +4,9 @@ Tema predeterminado negro, dorado y rojo con una red SVG detrás de paneles oscu
 
 ## Controles
 
-En «Personalizar espacio»: Dorado y rojo, Brillo del fondo (Suave, Medio, Intenso o Sin fondo), Rendimiento visual (Ligero o Completo) y movimiento activado/pausado. Las preferencias persisten en este navegador. Se conservan los temas anteriores y el modo claro; una preferencia guardada anteriormente no se reemplaza automáticamente. El brillo inicial es Suave. En una primera apertura desde una pantalla de hasta 760 px, se selecciona Ligero; una elección guardada tiene prioridad.
+En «Personalizar espacio»: Dorado y rojo, Brillo del fondo (Suave, Medio, Intenso o Sin fondo), Rendimiento visual (Ligero o Completo) y movimiento activado/pausado. Las preferencias persisten en este navegador. Se conservan los temas anteriores y el modo claro; una preferencia guardada anteriormente no se reemplaza automáticamente. En una primera apertura, el brillo inicial es Intenso en escritorio y Suave hasta 760 px. Las preferencias ya guardadas siguen teniendo prioridad: para ver el aspecto luminoso en una sesión anterior, elegir «Intenso» y «Completo». En una primera apertura desde una pantalla de hasta 760 px, se selecciona Ligero; una elección guardada tiene prioridad.
 
-La red contiene 77 nodos y una cantidad acotada de enlaces, construidos una sola vez. Usa SVG y CSS locales sin canvas, WebGL, paquetes, fuentes externas, CDN ni consultas nuevas. No requiere GPU dedicada, aunque el coste real depende del navegador y equipo. Ligero elimina animaciones y halos; movimiento reducido del dispositivo y pestaña oculta detienen los pulsos. Sin fondo oculta el fondo entero. No se hizo un benchmark en la PC del usuario.
+La red contiene 228 nodos, 76 halos radiales y destellos estáticos y una cantidad acotada de enlaces, construidos una sola vez. Usa SVG y CSS locales sin canvas, WebGL, paquetes, fuentes externas, CDN ni consultas nuevas. No requiere GPU dedicada, aunque el coste real depende del navegador y equipo. Ligero elimina animaciones y halos; movimiento reducido del dispositivo y pestaña oculta detienen los pulsos. Sin fondo oculta el fondo entero. No se hizo un benchmark en la PC del usuario.
 
 ## Actividad verificable
 
@@ -21,4 +21,14 @@ La clasificación usa exclusivamente tareas locales: no supone que una tarjeta r
 - E2E `scripts/Test-ArkosTaskCenter.cjs`: tarea real local hasta resultado, persistencia, XSS, layouts, controles de brillo/rendimiento/movimiento, inicio móvil ligero y red observando transiciones. El escenario `running → completed` del fondo usa respuestas HTTP sintéticas controladas: comprueba presentación, no el ejecutor real.
 - Capturas en `screenshots/`: pantalla real con tareas sintéticas de prueba.
 
-Este cambio se apila sobre #5. No añade voz, herramientas Hermes ni permisos nuevos. Falta aceptación en Windows del usuario. No instala, despliega ni modifica su PC.
+La revisión de brillo y densidad se apila sobre #8 (`2a00be43f0bc70608486cfee9f63b02e458165c2`). No añade voz, herramientas Hermes ni permisos nuevos. Falta aceptación en Windows del usuario. No instala, despliega ni modifica su PC.
+
+## Referencia luminosa
+
+La revisión añade conexiones rojas y doradas más densas, halos locales SVG, destellos estáticos, bordes dorados luminosos y un núcleo de 230 px en escritorio amplio. Los paneles de lectura conservan fondo oscuro opaco. Los destellos son decorativos y estáticos: los pulsos de ejecución conservan la clasificación local anterior. Ligero oculta halos, destellos y ramificaciones rojas; no cambia estados ni permisos.
+
+La captura de referencia es una propuesta artística; no demuestra conectores funcionando. El navegador de la PC deberá validar el parecido, el ancho responsive y el coste real.
+
+Las rutas luminosas del núcleo aparecen solo para `running` o la transición `completed` ya observada localmente. Son decorativas y no prueban una transferencia de red. Desaparecen en modo Ligero, movimiento pausado, pestaña oculta y movimiento reducido.
+
+El semáforo complementa los nombres exactos: rojo para aprobación pendiente, bloqueo o fallo; amarillo para cola, reserva, ejecución o resultado incierto; verde para resultado terminado; gris para cancelación. Los nueve estados remotos siguen diferenciados por texto: color compartido no implica estado ni autoridad compartidos. El acceso «Equipo · por conectar» solo explica lo pendiente y no crea miembros, mensajes ni invitaciones.
