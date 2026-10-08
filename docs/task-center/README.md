@@ -103,6 +103,7 @@ attachment disposition; video bytes are streamed by the server.
 ```sh
 python -m unittest discover -s tests -v
 node --check arkos_pilot/web/app.js
+node scripts/Test-ArkosRemoteView.cjs
 node scripts/Test-ArkosTaskCenter.cjs
 ```
 
@@ -125,6 +126,8 @@ mobile overflow, theme persistence, search, pending connections, missing auth an
 disconnection. It then removes its state. Screenshots under `screenshots/` show
 synthetic tasks created through the real UI; they are not Jona's personal data.
 
+See [REMOTE_VIEW_PREPARATION.md](REMOTE_VIEW_PREPARATION.md) for the internal
+read-only remote presentation boundary, not yet connected to a producer.
 See [UI_ROADMAP.md](UI_ROADMAP.md) for the new design and prioritized modules.
 See [VALIDATION.md](VALIDATION.md) for observed results and Windows acceptance.
 See [SYNC_CONTRACT_DRAFT.md](SYNC_CONTRACT_DRAFT.md) before implementing a relay.

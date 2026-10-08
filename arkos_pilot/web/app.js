@@ -25,7 +25,7 @@ function statusPill(task) {return element('span', 'status-pill ' + task.state, l
 function taskCard(task, results = false) {
   const card = element('article', 'task-card'); card.dataset.taskId = task.id; card.dataset.state = task.state;
   const top = element('div', 'card-top'); top.append(element('span', 'card-type', task.payload.action === 'note' ? '▧' : '▷'), element('span', '', new Date(task.created * 1000).toLocaleDateString('es-AR', {day:'numeric',month:'short'})));
-  card.append(top, element('h3','',title(task)), element('p','excerpt',description(task)), statusPill(task));
+  card.append(top, element('span','origin-pill','Solo esta PC'), element('h3','',title(task)), element('p','excerpt',description(task)), statusPill(task));
   const action = element('button','secondary card-action', task.state === 'completed' ? 'Abrir resultado ↗' : task.state === 'queued' ? 'Revisar y ejecutar →' : 'Ver tarea →');
   action.disabled = !state.online;
   action.addEventListener('click', () => {if (task.state === 'completed') openArtifact(task).catch(e => toast(e.message)); else review(task);});
@@ -72,14 +72,20 @@ function renderConnections() {
   ];
   for (const [symbol,name,copy,status] of items) {const card=element('article','connection-card');card.append(element('div','connection-symbol',symbol),element('h2','',name),element('p','',copy),element('span','status-pill',status));container.append(card);}
 }
+// Adapter boundary: this endpoint is deliberately not connected to Claude's producer yet.
+let remoteView={projection_version:1,sync_status:'not_configured',device_status:'unknown',last_sync:null,tasks:[]};
+function remoteUnavailable(){remoteView={...remoteView,sync_status:remoteView.last_sync?'stale':'unavailable',device_status:'unknown'};ArkosRemoteView.render($('remote-view'),remoteView);}
+async function refreshRemote(){try{remoteView=ArkosRemoteView.validate(await api('/api/remote-view'));ArkosRemoteView.render($('remote-view'),remoteView);}catch{remoteUnavailable();}}
 async function refresh() {
   if (state.refreshing) return; state.refreshing = true;
   try {
     const [status, tasks] = await Promise.all([api('/api/status'),api('/api/tasks')]);
     state.status = status; state.tasks = tasks.tasks; state.online = true;
     $('connection-banner').hidden = true; $('device-label').textContent = 'Esta PC · conectada'; $('device-dot').classList.remove('offline');
+    await refreshRemote();
     $('last-sync').textContent = 'Actualizado ' + new Date().toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'});
   } catch (e) {
+    remoteUnavailable();
     state.online = false; $('connection-banner').textContent = e.message; $('connection-banner').hidden = false;
     $('device-label').textContent = 'Sin conexión local'; $('device-dot').classList.add('offline'); $('last-sync').textContent = 'Datos sin actualizar';
   } finally {state.refreshing = false; render();}

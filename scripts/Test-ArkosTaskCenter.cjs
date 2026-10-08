@@ -118,6 +118,30 @@ async function main(){
   await page.locator('[data-page="connections"]').click();
   assert.match(await page.locator('#connections-grid').textContent(),/WhatsApp/);
   assert.match(await page.locator('#connections-grid').textContent(),/Sincronización pendiente/);
+  // Controlled synthetic transport projection; not a deployed relay.
+  await page.locator('[data-page="home"]').click();
+  assert.match(await page.locator('#remote-view').textContent(),/Conexión pendiente/);
+  const remoteFixture={projection_version:1,sync_status:'current',device_status:'unknown',last_sync:new Date().toISOString(),tasks:[
+    {id:'tsk_uncertain',title:'<img src=x onerror="window.remoteInjected=true">',state:'unknown',updated_at:new Date().toISOString(),result_summary:'Revisar salida antes de decidir',result_availability:'metadata_only'},
+    {id:'tsk_claimed',title:'Trabajo reservado',state:'claimed',updated_at:new Date().toISOString(),result_summary:'',result_availability:'not_available'},
+    {id:'tsk_waiting',title:'Pedido sin aprobar',state:'awaiting_approval',updated_at:new Date().toISOString(),result_summary:'',result_availability:'not_available'}]};
+  await page.route('**/api/remote-view',route=>route.fulfill({json:remoteFixture}));
+  const writes=[];page.on('request',request=>{if(request.method()==='POST')writes.push(request.url());});
+  await page.getByRole('button',{name:'Actualizar tareas',exact:true}).click();
+  await page.locator('.remote-task-card').first().waitFor();
+  assert.equal(await page.locator('.remote-task-card').count(),3);
+  assert.equal(await page.locator('#remote-view button').count(),0);
+  assert.equal(await page.locator('#stat-review').textContent(),'1');
+  assert.equal(await page.evaluate(()=>window.remoteInjected),undefined);
+  assert.match(await page.locator('#remote-view').textContent(),/Reservada no significa/);
+  assert.match(await page.locator('#remote-view').textContent(),/No se reintenta automáticamente/);
+  assert.match(await page.locator('#remote-view').textContent(),/solo información/);
+  remoteFixture.sync_status='stale';
+  await page.getByRole('button',{name:'Actualizar tareas',exact:true}).click();
+  await page.locator('.remote-sync-state').filter({hasText:'Datos desactualizados'}).waitFor();
+  assert.equal(await page.locator('.remote-task-card').count(),3);
+  assert.deepEqual(writes,[]);
+  await page.unroute('**/api/remote-view');
   // Same session must not expose its data to a browser without its launch key.
   const outsider=await browser.newContext();const outsidePage=await outsider.newPage();
   await outsidePage.goto(url.split('#')[0]);
@@ -130,6 +154,6 @@ async function main(){
   await page.getByRole('button',{name:'Actualizar tareas',exact:true}).click();
   await page.getByText('Sin conexión local',{exact:true}).first().waitFor({state:'attached'});
   assert.equal(await page.locator('#connection-banner').isVisible(),true);
-  console.log('PASS: browser → API → SQLite → approved execution → artifact; persistence, cancellation, XSS rendering, mobile layout, theme persistence, motion controls/reduced motion, real task inbox and seen persistence, clock, voice placeholder, search, proposals, pending connections, unauthorized client, offline state.');
+  console.log('PASS: browser → API → SQLite → approved execution → artifact; persistence, cancellation, XSS rendering, mobile layout, theme persistence, motion controls/reduced motion, real task inbox and seen persistence, clock, voice placeholder, read-only remote projection (synthetic transport), search, proposals, pending connections, unauthorized client, offline state.');
 }
 main().catch(e=>{console.error(e.message);process.exitCode=1;}).finally(async()=>{if(browser)await browser.close();if(server.exitCode===null&&!server.killed){server.kill();await new Promise(r=>server.once('exit',r));}fs.rmSync(stateDir,{recursive:true,force:true});});

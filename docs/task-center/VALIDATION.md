@@ -75,3 +75,10 @@ was connected by this visual increment. PC uptime and work hours remain pending.
 
 La revisión de intensidad de color y geometría SVG se verificó con el mismo recorrido de
 navegador y capturas regeneradas. No cambia APIs, permisos ni ejecución.
+
+## Preparación remota
+
+29 pruebas Python aprobadas, incluido endpoint remoto privado vacío y rechazo
+de IDs remotos en acciones locales. La prueba Node de la proyección interna
+aprobó los nueve estados y el filtrado de campos. El E2E usa transporte sintético
+para los estados remotos; no certifica integración con el productor de Claude.

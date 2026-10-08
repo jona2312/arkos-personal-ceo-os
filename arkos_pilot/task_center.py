@@ -112,7 +112,7 @@ class Handler(BaseHTTPRequestHandler):
         path = urlsplit(self.path).path
         if not self.allowed(private=path.startswith('/api/')):
             return
-        static = {'/': ('index.html', 'text/html; charset=utf-8'), '/app.js': ('app.js', 'text/javascript; charset=utf-8'), '/style.css': ('style.css', 'text/css; charset=utf-8'), '/mark.svg': ('mark.svg', 'image/svg+xml')}
+        static = {'/': ('index.html', 'text/html; charset=utf-8'), '/app.js': ('app.js', 'text/javascript; charset=utf-8'), '/remote-view.js': ('remote-view.js', 'text/javascript; charset=utf-8'), '/style.css': ('style.css', 'text/css; charset=utf-8'), '/mark.svg': ('mark.svg', 'image/svg+xml')}
         try:
             if path in static:
                 name, mime = static[path]
@@ -125,6 +125,9 @@ class Handler(BaseHTTPRequestHandler):
                 return
             if path == '/api/status':
                 self.json(200, {'mode': 'local', 'worker_busy': self.server.worker_lock.locked(), 'ffmpeg': bool(shutil.which('ffmpeg')), 'capabilities': {'notes': True, 'clips': bool(shutil.which('ffmpeg')), 'hermes_chat': False, 'remote_sync': False, 'email': False, 'calendar': False, 'whatsapp': False}})
+            elif path == '/api/remote-view':
+                # No file, credential, network call or producer contract is assumed.
+                self.json(200, {'projection_version': 1, 'sync_status': 'not_configured', 'device_status': 'unknown', 'last_sync': None, 'tasks': []})
             elif path == '/api/tasks':
                 with queue_at(self.server.root) as queue:
                     tasks = queue.list()

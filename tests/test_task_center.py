@@ -64,6 +64,17 @@ class TaskCenterTests(unittest.TestCase):
             time.sleep(.01)
         self.fail(f"Task did not reach {expected}: {task}")
 
+    def test_remote_view_is_private_unconfigured_and_does_not_create_local_tasks(self):
+        self.assertEqual(self.request('GET', '/api/remote-view', key=False)[0], 401)
+        code, view = self.json('GET', '/api/remote-view')
+        self.assertEqual(code, 200)
+        self.assertEqual(view['sync_status'], 'not_configured')
+        self.assertEqual(view['tasks'], [])
+        self.assertIsNone(view['last_sync'])
+        self.assertEqual(self.json('GET', '/api/tasks')[1]['tasks'], [])
+        self.assertEqual(self.json('POST', '/api/tasks/tsk_remote/run', {})[0], 404)
+        self.assertEqual(self.json('GET', '/api/tasks')[1]['tasks'], [])
+
     def test_http_note_review_execute_artifact_and_persistence(self):
         task = self.note('Idea <script>alert(1)</script>\nmañana')
         code, _ = self.json('POST',f"/api/tasks/{task['id']}/run",{})
