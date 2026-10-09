@@ -1,0 +1,29 @@
+{
+  "status": "PASS",
+  "runner": "synthetic HermesBridge subprocess; no Qwen",
+  "geometry": {
+    "width": 1512,
+    "scroll": 1497,
+    "scale": 1,
+    "dpr": 1
+  },
+  "mobileGeometry": {
+    "width": 390,
+    "scroll": 375,
+    "scale": 1,
+    "quality": "lite"
+  },
+  "errors": [],
+  "autoExecutionRequests": 0,
+  "tests": [
+    "history",
+    "proposal pending",
+    "double click",
+    "cancel",
+    "invalid response",
+    "XSS",
+    "task polling while waiting",
+    "full/lite/pause/reduced motion",
+    "voice/team pending"
+  ]
+}

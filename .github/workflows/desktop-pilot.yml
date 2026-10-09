@@ -29,6 +29,10 @@ jobs:
         if: runner.os == 'Windows'
         shell: pwsh
         run: ./scripts/Start-Arkos.ps1 propose 'Quiero organizar mis tareas'
+      - name: Preserve launcher environment on success and failure
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: ./scripts/Test-ArkosLauncherEnvironment.ps1 -PythonPath (Get-Command python).Source
       - name: Parse PowerShell scripts and inspect desktop readiness
         if: runner.os == 'Windows'
         shell: pwsh

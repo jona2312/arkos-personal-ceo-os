@@ -26,17 +26,30 @@ class Queue:
             state TEXT NOT NULL, approval_until REAL, approved_fingerprint TEXT,
             created REAL NOT NULL, updated REAL NOT NULL, result TEXT)""")
         self.db.commit()
+        self.db.execute("CREATE TABLE IF NOT EXISTS task_sources (source_key TEXT PRIMARY KEY, task_id TEXT NOT NULL)")
+        self.db.commit()
 
     def close(self):
         self.db.close()
 
-    def add(self, payload):
+    def add(self, payload, source_key=None):
         validate(payload)
+        self.db.execute("BEGIN IMMEDIATE")
+        if source_key is not None:
+            row = self.db.execute("SELECT task_id FROM task_sources WHERE source_key=?", (source_key,)).fetchone()
+            if row:
+                existing = self.get(row[0])
+                self.db.rollback()
+                if existing["payload"] != payload:
+                    raise ValueError("La propuesta ya fue usada con otro contenido")
+                return existing
         task_id = uuid.uuid4().hex
         now = time.time()
         self.db.execute("INSERT INTO tasks VALUES (?,?,?,?,?,?,?,?,?)", (
             task_id, json.dumps(payload, ensure_ascii=False), digest(payload), "awaiting_approval",
             None, None, now, now, None))
+        if source_key is not None:
+            self.db.execute("INSERT INTO task_sources VALUES (?,?)", (source_key, task_id))
         self.db.commit()
         return self.get(task_id)
 

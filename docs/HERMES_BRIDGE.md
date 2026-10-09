@@ -1,6 +1,8 @@
 # Puente conversacional ARKOS ↔ Hermes (v1: chat escrito y propuestas de notas)
 
-Estado: prototipo de backend con pruebas sintéticas. **No conectado a la PC ni a la pantalla.**
+Estado: backend integrado a la portada mediante el adaptador de
+[conversación](task-center/CONVERSATION_HOME.md), con aceptación Windows sintética.
+**Hermes/Qwen real sigue sin conectar en esta pantalla.**
 El modelo conversa y *propone* notas. No aprueba, no ejecuta y no escribe en
 `arkos_pilot.Queue` ni en el relay.
 
@@ -247,5 +249,6 @@ Aceptación:
   loopback; el bloqueo de red lo impone.
 - **Privacidad.** El texto viaja al llama.cpp local. Los logs de Hermes del perfil del puente
   pueden contener la conversación.
-- **Pantalla.** Falta la sección de chat en el Task Center y el botón "Crear tarea desde esta
-  propuesta". Ese botón debe crear la tarea en `awaiting_approval` y nunca aprobarla.
+- **Pantalla.** La portada ofrece chat y creación explícita de notas propuestas en
+  estado pendiente, con validación e idempotencia. La conexión con el modelo real,
+  su latencia y calidad siguen pendientes; ver la aceptación de conversación.

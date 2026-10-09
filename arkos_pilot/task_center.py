@@ -15,6 +15,7 @@ import webbrowser
 from .relay_snapshot import DEVICE, read_view
 from .catalog import propose
 from .core import Queue, clip_payload
+from .chat import Conversations, ChatError, REQUEST_ID
 
 WEB = Path(__file__).with_name('web')
 TASK_ID = re.compile(r'^[0-9a-f]{32}$')
@@ -33,7 +34,7 @@ def queue_at(root):
 class TaskCenter(ThreadingHTTPServer):
     daemon_threads = True
 
-    def __init__(self, state_dir, port=0, relay_snapshot=None, relay_device_id=None):
+    def __init__(self, state_dir, port=0, relay_snapshot=None, relay_device_id=None, bridge=None, chat_mode='hermes'):
         if (relay_snapshot is None) != (relay_device_id is None) or (relay_device_id is not None and not DEVICE.fullmatch(relay_device_id)):
             raise ValueError("Configurá juntos el snapshot y el ID de dispositivo válido.")
         self.relay_snapshot = relay_snapshot
@@ -45,6 +46,12 @@ class TaskCenter(ThreadingHTTPServer):
         self.worker_lock = threading.Lock()
         super().__init__(('127.0.0.1', port), Handler)
         self.origin = f'http://127.0.0.1:{self.server_port}'
+        self.chat = Conversations(self.root, bridge, chat_mode)
+
+    def server_close(self):
+        if hasattr(self, 'chat'):
+            self.chat.close()
+        super().server_close()
 
     def launch(self, task_id):
         if not self.worker_lock.acquire(blocking=False):
@@ -119,6 +126,17 @@ class Handler(BaseHTTPRequestHandler):
             return
         static = {'/': ('index.html', 'text/html; charset=utf-8'), '/app.js': ('app.js', 'text/javascript; charset=utf-8'), '/neural.js': ('neural.js', 'text/javascript; charset=utf-8'), '/remote-view.js': ('remote-view.js', 'text/javascript; charset=utf-8'), '/style.css': ('style.css', 'text/css; charset=utf-8'), '/mark.svg': ('mark.svg', 'image/svg+xml')}
         try:
+            if path == '/api/chat':
+                self.json(200, self.server.chat.status())
+                return
+            if path.startswith('/api/chat/'):
+                rid = path.removeprefix('/api/chat/')
+                if not REQUEST_ID.fullmatch(rid):
+                    raise ValueError('Turno inválido.')
+                self.json(200, self.server.chat.get(rid))
+                return
+            if path == '/chat.js':
+                static[path] = ('chat.js', 'text/javascript; charset=utf-8')
             if path in static:
                 name, mime = static[path]
                 data = (WEB / name).read_bytes()
@@ -129,7 +147,7 @@ class Handler(BaseHTTPRequestHandler):
                 self.wfile.write(data)
                 return
             if path == '/api/status':
-                self.json(200, {'mode': 'local', 'worker_busy': self.server.worker_lock.locked(), 'ffmpeg': bool(shutil.which('ffmpeg')), 'capabilities': {'notes': True, 'clips': bool(shutil.which('ffmpeg')), 'hermes_chat': False, 'remote_sync': False, 'email': False, 'calendar': False, 'whatsapp': False}})
+                self.json(200, {'mode': 'local', 'worker_busy': self.server.worker_lock.locked(), 'ffmpeg': bool(shutil.which('ffmpeg')), 'capabilities': {'notes': True, 'clips': bool(shutil.which('ffmpeg')), 'hermes_chat': self.server.chat.bridge is not None, 'remote_sync': False, 'email': False, 'calendar': False, 'whatsapp': False}})
             elif path == '/api/remote-view':
                 self.json(200, read_view(self.server.relay_snapshot, self.server.relay_device_id))
             elif path == '/api/tasks':
@@ -161,6 +179,8 @@ class Handler(BaseHTTPRequestHandler):
                     shutil.copyfileobj(stream, self.wfile)
             else:
                 self.json(404, {'error': 'Recurso no encontrado.'})
+        except ChatError as exc:
+            self.json(exc.status, {'error': str(exc)})
         except (ValueError, OSError, sqlite3.Error):
             self.json(400, {'error': 'No se pudo consultar el recurso. Revisá el estado de la tarea y su archivo.'})
 
@@ -171,12 +191,29 @@ class Handler(BaseHTTPRequestHandler):
             if self.headers.get('Content-Type', '').split(';')[0].strip() != 'application/json':
                 raise ValueError('Se requiere JSON.')
             length = int(self.headers.get('Content-Length', '0'))
-            if not 0 < length <= MAX_BODY:
+            path = urlsplit(self.path).path
+            limit = 200_000 if path.startswith('/api/chat') else MAX_BODY
+            if self.headers.get('Transfer-Encoding') or not 0 < length <= limit:
                 raise ValueError('Pedido vacío o demasiado grande.')
             data = json.loads(self.rfile.read(length))
             if not isinstance(data, dict):
                 raise ValueError('Pedido inválido.')
             path = urlsplit(self.path).path
+            if path == '/api/chat':
+                self.json(202, self.server.chat.start(data))
+                return
+            if path.startswith('/api/chat/'):
+                parts = path.strip('/').split('/')
+                if len(parts) != 4 or not REQUEST_ID.fullmatch(parts[2]):
+                    raise ValueError('Ruta de conversación inválida.')
+                rid, action = parts[2:]
+                if action == 'cancel' and not data:
+                    self.json(200, self.server.chat.cancel(rid))
+                elif action == 'note' and set(data) == {'proposal_id'} and isinstance(data['proposal_id'], str):
+                    self.json(200, {'task': self.server.chat.create_note(rid, data['proposal_id'])})
+                else:
+                    raise ValueError('Acción de conversación inválida.')
+                return
             if path == '/api/propose':
                 goal = data.get('goal')
                 if not isinstance(goal, str) or not goal.strip() or len(goal) > 4000:
@@ -218,6 +255,8 @@ class Handler(BaseHTTPRequestHandler):
                 else:
                     raise ValueError('Acción no disponible.')
                 self.json(200, {'task': result})
+        except ChatError as exc:
+            self.json(exc.status, {'error': str(exc)})
         except ValueError as exc:
             message = str(exc) if not isinstance(exc, (json.JSONDecodeError, UnicodeDecodeError)) else 'JSON inválido.'
             self.json(400, {'error': message})
@@ -234,9 +273,22 @@ def main(argv=None):
     parser.add_argument('--no-browser', action='store_true')
     parser.add_argument('--relay-snapshot', type=Path, help='Snapshot de lectura explícito; no se busca automáticamente')
     parser.add_argument('--relay-device-id', help='Dispositivo esperado en el snapshot')
+    parser.add_argument('--hermes-python', type=Path)
+    parser.add_argument('--hermes-source', type=Path)
+    parser.add_argument('--hermes-home', type=Path, help='Perfil dedicado ya autorizado y existente')
+    parser.add_argument('--hermes-model', default='')
     args = parser.parse_args(argv)
     try:
-        server = TaskCenter(args.state_dir, args.port, args.relay_snapshot, args.relay_device_id)
+        bridge = None
+        settings = (args.hermes_python, args.hermes_source, args.hermes_home)
+        if any(settings):
+            if not all(settings) or not args.hermes_python.is_file() or not args.hermes_source.is_dir() or not args.hermes_home.is_dir():
+                raise ValueError('Hermes requiere Python, fuente y perfil dedicado existentes.')
+            from arkos_hermes.bridge import HermesBridge
+            bridge = HermesBridge(*settings, model=args.hermes_model)
+        elif args.hermes_model:
+            raise ValueError('Configurá Hermes antes de elegir su modelo.')
+        server = TaskCenter(args.state_dir, args.port, args.relay_snapshot, args.relay_device_id, bridge=bridge)
     except ValueError as exc:
         parser.error(str(exc))
     url = f'{server.origin}/#key={server.key}'

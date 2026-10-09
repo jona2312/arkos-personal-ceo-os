@@ -13,12 +13,15 @@ $ErrorActionPreference = 'Stop'
 # Restore the caller's process environment even on error or Ctrl+C.
 $runtimeEnvironment = @{}
 foreach ($setting in @('PYTHON_MANAGER_AUTOMATIC_INSTALL', 'PYLAUNCHER_ALLOW_INSTALL', 'PYLAUNCHER_ALWAYS_INSTALL', 'PYLAUNCHER_DRYRUN')) {
-    $runtimeEnvironment[$setting] = [Environment]::GetEnvironmentVariable($setting, 'Process')
+    $runtimeEnvironment[$setting] = @{
+        Present = [Environment]::GetEnvironmentVariables('Process').Contains($setting)
+        Value = [Environment]::GetEnvironmentVariable($setting, 'Process')
+    }
 }
 try {
     [Environment]::SetEnvironmentVariable('PYTHON_MANAGER_AUTOMATIC_INSTALL', 'false', 'Process')
     foreach ($setting in @('PYLAUNCHER_ALLOW_INSTALL', 'PYLAUNCHER_ALWAYS_INSTALL', 'PYLAUNCHER_DRYRUN')) {
-        [Environment]::SetEnvironmentVariable($setting, $null, 'Process')
+        Remove-Item -LiteralPath "Env:$setting" -ErrorAction SilentlyContinue
     }
     $repoRoot = Split-Path -Parent $PSScriptRoot
     $selectedPython = $null
@@ -57,7 +60,14 @@ try {
     } finally { Pop-Location }
 } finally {
     foreach ($setting in $runtimeEnvironment.Keys) {
-        [Environment]::SetEnvironmentVariable($setting, $runtimeEnvironment[$setting], 'Process')
+        $original = $runtimeEnvironment[$setting]
+        if ($original.Present) {
+            [Environment]::SetEnvironmentVariable($setting, [string]$original.Value, 'Process')
+        } else {
+            # On .NET 10, binding PowerShell $null to a string creates an empty
+            # variable. The environment provider explicitly removes it instead.
+            Remove-Item -LiteralPath "Env:$setting" -ErrorAction SilentlyContinue
+        }
     }
 }
 exit $launchExit
