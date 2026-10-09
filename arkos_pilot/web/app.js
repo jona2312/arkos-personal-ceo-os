@@ -2,7 +2,7 @@
 const $ = (id) => document.getElementById(id);
 const state = {tasks: [], status: {}, online: false, page: 'home', refreshing: false, review: null, proposal: '', artifact: null};
 const labels = {awaiting_approval: 'Por aprobar', queued: 'En cola', running: 'Ejecutando', completed: 'Completada', blocked: 'Revisar bloqueo', cancelled: 'Cancelada'};
-const pages = {home: 'Hoy', conversation: 'Conversación', tasks: 'Tareas', results: 'Resultados', connections: 'Conexiones'};
+const pages = {prepare: 'Preparador local', home: 'Hoy', conversation: 'Conversación', tasks: 'Tareas', results: 'Resultados', connections: 'Conexiones'};
 const storage = {get(k) {try {return localStorage.getItem(k);} catch {return null;}}, set(k,v) {try {localStorage.setItem(k,v);} catch { /* preferences remain session-only */ }}};
 let key = new URLSearchParams(location.hash.slice(1)).get('key');
 try { if (key) sessionStorage.setItem('arkos-session-key', key); else key = sessionStorage.getItem('arkos-session-key'); } catch { /* keep key only in memory */ }
@@ -15,7 +15,7 @@ async function api(path, data) {
   if (data !== undefined) { options.method = 'POST'; options.headers['Content-Type'] = 'application/json'; options.body = JSON.stringify(data); }
   let response;
   try {response = await fetch(path, options);} catch {throw new Error('No se pudo contactar a ARKOS. Actualizá las tareas antes de reintentar: el último pedido podría haberse guardado.');}
-  if (!response.ok) {const body = await response.json().catch(() => ({})); throw new Error(body.error || 'No se pudo completar el pedido.');}
+  if (!response.ok) {const body = await response.json().catch(() => ({})); const error=new Error(body.error || 'No se pudo completar el pedido.');error.status=response.status;throw error;}
   return response.json();
 }
 function matches(task, filter) {if (filter === 'review') return ['awaiting_approval','blocked'].includes(task.state); if (filter === 'active') return ['queued','running'].includes(task.state); return filter === 'all' || task.state === filter;}
@@ -62,7 +62,7 @@ function renderConnections() {
   const items = [
     ['▧','Notas y documentos','Guardá contenido en Markdown desde una tarea revisada.',state.online ? 'Disponible en esta PC' : 'Sin conexión local'],
     ['▷','Video · FFmpeg','Recortes locales con inicio y duración; se conserva el original.',state.status.ffmpeg ? 'Detectado · requiere revisión' : 'FFmpeg no detectado'],
-    ['◌','Hermes','El motor conversacional del piloto. Su conexión con este panel todavía falta.','Integración pendiente'],
+    ['◌','Hermes','Conversación escrita y propuestas revisables. No ejecuta tareas.',state.status.capabilities?.hermes_chat ? 'Configurado para esta sesión' : 'Hermes por conectar'],
     ['✉','Correo','Lectura, organización y respuestas desde una cuenta autorizada.','Conexión pendiente'],
     ['▦','Calendario','Agenda, disponibilidad y eventos en tu cuenta.','Conexión pendiente'],
     ['◉','WhatsApp','Mensajes autorizados y encargos desde el teléfono.','Conexión pendiente'],
@@ -92,6 +92,7 @@ async function refresh() {
   } finally {state.refreshing = false; render();}
 }
 function page(name) {
+  if(name==='conversation'){name='home';setTimeout(()=>$('chat-input').focus(),0);}
   if (!pages[name]) return; state.page = name;
   document.querySelectorAll('.page').forEach(p => p.hidden = p.id !== 'page-' + name);
   document.querySelectorAll('[data-page]').forEach(b => {b.classList.toggle('active',b.dataset.page === name); if(b.dataset.page===name)b.setAttribute('aria-current','page');else b.removeAttribute('aria-current');});

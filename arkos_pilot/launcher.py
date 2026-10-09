@@ -29,7 +29,7 @@ def preflight(state_dir, port=0, relay_snapshot=None, relay_device_id=None):
     except ImportError:
         sqlite_ok = False
     check('sqlite', sqlite_ok, 'SQLite de Python debe estar disponible para la cola local.')
-    check('web', all((Path(__file__).with_name('web') / name).is_file() for name in ('index.html', 'app.js', 'neural.js', 'remote-view.js', 'style.css', 'mark.svg')), 'El checkout debe incluir todos los archivos de la pantalla.')
+    check('web', all((Path(__file__).with_name('web') / name).is_file() for name in ('index.html', 'app.js', 'chat.js', 'neural.js', 'remote-view.js', 'style.css', 'mark.svg')), 'El checkout debe incluir todos los archivos de la pantalla.')
     path = Path(state_dir) if state_dir is not None else None
     safe = path is not None
     try:

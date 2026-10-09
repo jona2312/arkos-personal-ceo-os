@@ -7,23 +7,25 @@ const path = require('node:path');
 const {chromium} = require(require.resolve('playwright', {paths: [process.env.CODEX_PRIMARY_RUNTIME_NODE_MODULES || process.cwd(), ...require.resolve.paths('playwright')]}));
 const root = path.resolve(__dirname, '..');
 const stateDir = fs.mkdtempSync(path.join(os.tmpdir(), 'arkos-center-e2e-'));
-const evidence = path.join(root,'docs','task-center','screenshots');
+const evidence = process.env.ARKOS_TEST_EVIDENCE || path.join(root,'docs','task-center','screenshots');
 fs.mkdirSync(evidence, {recursive:true});
 const server=spawn(process.env.ARKOS_TEST_PYTHON || 'python',['-m','arkos_pilot.task_center','--state-dir',stateDir,'--port','0','--no-browser'],{cwd:root,stdio:['ignore','pipe','pipe']});
 let browser;
 async function main(){
   const url=await new Promise((resolve,reject)=>{let buffer='';const timer=setTimeout(()=>reject(new Error('Local server did not start')),10000);server.stdout.on('data',chunk=>{buffer+=chunk.toString();const match=buffer.match(/http:\/\/127\.0\.0\.1:\d+\/#key=[\w-]+/);if(match){clearTimeout(timer);resolve(match[0]);}});server.on('error',reject);server.on('exit',code=>{clearTimeout(timer);reject(new Error('Server stopped: '+code));});});
-  browser=await chromium.launch({headless:true, ...(process.env.ARKOS_TEST_CHROMIUM ? {executablePath:process.env.ARKOS_TEST_CHROMIUM} : {}), ...(process.env.ARKOS_TEST_CHROMIUM_ARGS ? {args:JSON.parse(process.env.ARKOS_TEST_CHROMIUM_ARGS)} : {})});
+  browser=await chromium.launch({headless:process.env.ARKOS_TEST_HEADED!=='1',chromiumSandbox:true, ...(process.env.ARKOS_TEST_CHROMIUM ? {executablePath:process.env.ARKOS_TEST_CHROMIUM} : {}), ...(process.env.ARKOS_TEST_CHROMIUM_ARGS ? {args:JSON.parse(process.env.ARKOS_TEST_CHROMIUM_ARGS)} : {})});
   const page=await browser.newPage({viewport:{width:1512,height:1050},deviceScaleFactor:1,timezoneId:'America/Argentina/Buenos_Aires'});
   const errors=[];page.on('pageerror',e=>errors.push(e.message));
   await page.goto(url);
   await page.getByText('Esta PC · conectada',{exact:true}).waitFor();
   assert.equal(await page.locator('.task-card').count(),0);
+  await page.getByText('Hermes por conectar',{exact:true}).first().waitFor();
+  assert.equal(await page.getByLabel('Escribile a ARKOS',{exact:true}).isDisabled(),true);
   assert.equal(await page.locator('html').getAttribute('data-accent'),'neural');
   assert.equal(await page.locator('.neural-network').count(),1);
   assert.equal(await page.locator('html').getAttribute('data-activity'),'idle');
   assert.equal(await page.locator('.neural-signals').evaluate(el=>getComputedStyle(el).animationPlayState),'paused');
-  async function createNote(text){await page.getByRole('button',{name:'Nueva tarea'}).first().click();await page.getByLabel('Contenido de la nota').fill(text);await page.getByRole('button',{name:'Guardar tarea',exact:true}).click();await page.locator('#task-dialog').waitFor({state:'hidden'});}
+  async function createNote(text){await page.getByRole('button',{name:'Nueva tarea'}).first().click();await page.getByLabel('Contenido de la nota').fill(text);await page.getByRole('button',{name:'Guardar tarea',exact:true}).click();await page.locator('#task-dialog').waitFor({state:'hidden'});await page.locator('#home-board .task-card').filter({hasText:text.split('\n')[0]}).first().waitFor();}
   const content='Plan para mañana\n1. Revisar la propuesta\n2. Organizar documentos\n3. Preparar la reunión';
   await createNote(content);
   await page.locator('#home-board .task-card').getByRole('button',{name:'Ver tarea'}).click();
@@ -34,7 +36,7 @@ async function main(){
   await page.locator('#home-board .task-card').getByRole('button',{name:'Abrir resultado'}).waitFor();
   await page.locator('#home-board .task-card').getByRole('button',{name:'Abrir resultado'}).click();
   await page.locator('#result-dialog').waitFor({state:'visible'});
-  assert.equal(await page.locator('#result-text').textContent(),content+'\n');
+  assert.equal((await page.locator('#result-text').textContent()).replace(/\r\n/g,'\n'),content+'\n');
   await page.locator('#result-dialog').getByRole('button',{name:'Cerrar',exact:true}).click();
   await createNote('Preparar propuesta comercial\nRevisar alcance y próximos pasos antes de enviar.');
   await createNote('Ordenar ideas del proyecto\nElegir tres prioridades para la próxima reunión.');
@@ -135,6 +137,7 @@ async function main(){
   await page.getByLabel('Buscar una tarea').fill('Plan para mañana');
   assert.equal(await page.locator('#tasks-list .task-card').count(),1);
   await page.locator('[data-page="conversation"]').click();
+  await page.getByRole('button',{name:'Preparador de tareas · reglas locales',exact:true}).click();
   await page.getByLabel('¿Qué te gustaría resolver?').fill('Quiero recortar un video');
   await page.getByRole('button',{name:'Preparar pedido'}).click();
   await page.locator('#proposal-result').waitFor({state:'visible'});
@@ -195,4 +198,4 @@ async function main(){
   assert.equal(await page.locator('#connection-banner').isVisible(),true);
   console.log('PASS: browser → API → SQLite → approved execution → artifact; persistence, cancellation, XSS rendering, mobile layout, theme persistence, motion controls/reduced motion, real task inbox and seen persistence, clock, voice placeholder, read-only remote projection (synthetic transport), search, proposals, pending connections, unauthorized client, offline state.');
 }
-main().catch(e=>{console.error(e.message);process.exitCode=1;}).finally(async()=>{if(browser)await browser.close();if(server.exitCode===null&&!server.killed){server.kill();await new Promise(r=>server.once('exit',r));}fs.rmSync(stateDir,{recursive:true,force:true});});
+main().catch(e=>{console.error(String(e.stack).replace(/#key=[\w-]+/g,'#key=[redacted]'));process.exitCode=1;}).finally(async()=>{if(browser)await browser.close();if(server.exitCode===null&&!server.killed){server.kill();await new Promise(r=>server.once('exit',r));}fs.rmSync(stateDir,{recursive:true,force:true});});

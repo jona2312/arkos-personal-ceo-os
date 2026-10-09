@@ -1,6 +1,11 @@
 # ARKOS Task Center — local pilot
 
 This increment adds a responsive interface for the existing Python/SQLite queue.
+La portada incorpora conversación escrita mediante HermesBridge: ver
+[contrato y operación](CONVERSATION_HOME.md) y
+[aceptación Windows](CONVERSATION_ACCEPTANCE_2026-10-09.md).
+Sin configuración explícita muestra “Hermes por conectar”; el runner sintético
+solo se habilita desde un script separado de aceptación.
 It is a local browser application, not a Hermes Desktop plugin, a cloud service,
 a mobile pairing service or an installed PWA. It requires Python 3.11+ and no new
 runtime packages. The interface, fonts and assets are local; no CDN or external
@@ -50,11 +55,12 @@ there is no CORS permission for other origins.
   task, cancel before execution, filter and search.
 - **Resultados:** safely preview note text (not rendered HTML/Markdown), download
   note/video artifacts from the queue's output directory.
-- **Conversación:** deterministic proposal helper from the existing catalog.
-  It explicitly describes itself as a preparer; it does not impersonate an LLM
-  conversation. Proposals can be saved as notes, not executed as arbitrary code.
+- **Conversación:** written turns through HermesBridge when explicitly configured;
+  otherwise “Hermes por conectar”. Reviewable proposals become pending notes only
+  after an explicit click. The existing deterministic catalog helper remains
+  separately labeled “Preparador de tareas · reglas locales”.
 - **Conexiones:** local notes available; FFmpeg availability detected from PATH;
-  Hermes chat, email, calendar and WhatsApp explicitly pending. The separate relay snapshot reader is available when explicitly configured; it cannot approve or execute remote work.
+  Hermes status reflects explicit bridge configuration; email, calendar and WhatsApp remain pending. The separate relay snapshot reader is available when explicitly configured; it cannot approve or execute remote work.
 - **Personalización:** dark/light, gold/red neural and blue/red/violet/monochrome, stored in the
   current browser. A CSS neon background and orbital core add motion, with
   pause controls, brightness settings, a lightweight mode, reduced-motion support and hidden-tab animation pause. See [NEURAL_THEME.md](NEURAL_THEME.md). Usable
@@ -73,7 +79,7 @@ Codex must choose a verified binary/PATH before the clip acceptance test.
 
 ## Execution and recovery boundaries
 
-The only shared-core change is `Queue.run_next(task_id=None)`. Existing CLI
+The selected execution path uses `Queue.run_next(task_id=None)`. Existing CLI
 behavior remains FIFO. The optional ID lets the UI claim the selected approved
 task inside the existing SQLite transaction; selecting one task cannot run a
 different queued task. Existing fingerprint, expiry, file hashing and exclusive
@@ -90,7 +96,8 @@ there is deliberately no automatic replay or HTTP recovery endpoint.
 A canceled task is retained in history. The API rejects repeat approval/run in
 invalid states. Writes are not automatically retried after a network failure;
 refresh the task list before resubmitting an uncertain request. Creation does not
-yet have durable idempotency keys; these are a requirement of the future relay.
+yet have general durable idempotency keys. Chat proposal conversion does have a
+transactional receipt, so retrying that conversion returns the same task.
 
 Clip paths refer to the current PC, not a phone filesystem. Preparing a clip
 reads/hashes the selected local source, as the original CLI does. This service

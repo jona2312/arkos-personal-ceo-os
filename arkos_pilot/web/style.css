@@ -99,7 +99,7 @@
 .neural-network{width:100%;height:100%;pointer-events:none}
 .neural-links{fill:none;stroke:var(--accent);stroke-width:.7;opacity:.42}
 .neural-signals{fill:none;stroke:var(--energy-pink);stroke-width:2;stroke-dasharray:5 85;opacity:0;animation:neural-flow 20s linear infinite;animation-play-state:paused}
-.neural-node{fill:var(--accent);opacity:.65}.neural-hub{fill:var(--energy-pink)}.neural-halo{fill:var(--accent);opacity:.13}
+.neural-node{fill:var(--accent);opacity:.65}.neural-hub{fill:var(--energy-pink)}.neural-halo{opacity:.13}
 .network-status{font-size:11px;color:var(--muted);margin:12px 0 0;line-height:1.6}
 :root[data-accent=neural] .ambient{background:radial-gradient(ellipse at 60% 0%,#5d301420,transparent 65%)}
 :root[data-accent=neural] .ambient-grid,:root[data-accent=neural] .ambient-stars,:root[data-accent=neural] .aurora{display:none}
@@ -207,6 +207,32 @@
 :root[data-motion=off] .route-packets,:root[data-page-visible=false] .route-packets,:root[data-quality=lite] .route-packets{animation:none}
 @media(prefers-reduced-motion:reduce){.agent-route{display:none}.route-packets{animation:none}}
 .inbox-channels{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin:14px 0 10px;border-bottom:1px solid var(--line);padding-bottom:10px}
+.chat-workspace{position:relative;z-index:1;min-width:0;border-top:1px solid var(--line);padding-top:18px}
+.command-core,.inbox-panel,.core-copy{min-width:0}
+.chat-heading,.chat-actions{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+.chat-heading h3{margin:0}.chat-state{color:var(--accent);font-size:13px;line-height:1.6}
+.chat-log{max-height:420px;overflow:auto;overscroll-behavior:contain;min-width:0}
+.chat-log:empty::before{content:"Tu conversación empieza acá.";display:block;padding:18px 0;color:var(--muted)}
+.chat-message{border:1px solid var(--line);border-radius:14px;padding:16px;margin:12px 0;background:var(--surface,#121214);min-width:0}
+.chat-message.user{border-left:3px solid var(--accent);margin-left:24px}
+.chat-message strong{font-size:12px;color:var(--accent)}
+.chat-message p,.chat-proposal pre{white-space:pre-wrap;overflow-wrap:anywhere;word-break:break-word;line-height:1.65;font:inherit}
+.chat-proposal{border-top:1px solid var(--line);margin-top:16px;padding-top:14px}
+.chat-proposal summary{cursor:pointer;font-weight:600;overflow-wrap:anywhere}
+.chat-proposal pre{max-height:220px;overflow:auto}
+.chat-outcome{color:var(--muted);padding:12px;border-left:2px solid var(--pink)}
+#chat-input{width:100%;min-width:0;box-sizing:border-box;font-size:16px;resize:vertical}
+.chat-actions{margin-top:12px}.chat-actions .field-help{flex:1;min-width:150px}
+.chat-actions button{min-height:44px}#chat-mode{white-space:normal;max-width:260px}
+:root[data-chat=waiting] .command-core .agent-route{opacity:1}
+:root[data-chat=waiting] .command-core .route-packets{animation-play-state:running;stroke:#ffcc69}
+:root[data-chat=waiting] .reactor-heart{box-shadow:0 0 42px #ffb72f}
+:root[data-chat=error] .command-core,:root[data-chat=timeout] .command-core{border-color:var(--pink)}
+:root[data-chat=offline] .command-core .route-packets{animation-play-state:paused}
+:root[data-quality=lite] .command-core .agent-route,:root[data-motion=off] .command-core .agent-route,:root[data-page-visible=false] .command-core .agent-route{display:none}
+@media(prefers-reduced-motion:reduce){.command-core .agent-route{display:none}.command-core .route-packets{animation:none}}
+@media(min-width:1000px){:root[data-accent=neural] .cockpit-grid{grid-template-columns:minmax(0,1.85fr) minmax(280px,1fr)}}
+@media(max-width:760px){.cockpit-grid{grid-template-columns:minmax(0,1fr)}.chat-message.user{margin-left:8px}.chat-actions{align-items:stretch}.chat-actions .field-help{flex-basis:100%}.chat-heading{align-items:flex-start}#chat-mode{max-width:180px}.core-top{flex-wrap:wrap;gap:10px}.chat-state{overflow-wrap:anywhere}}
 .channel-current{font-size:11px;color:var(--accent)}
 .inbox-channels .text-button{font-size:11px;white-space:normal;text-align:left}
 .status-pill.awaiting_approval,.status-pill.blocked,.status-pill.remote-awaiting_approval,.status-pill.remote-failed,.status-pill.remote-rejected{color:var(--pink)}

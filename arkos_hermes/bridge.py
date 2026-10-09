@@ -56,7 +56,7 @@ class HermesBridge:
             env["ARKOS_HERMES_SYNTHETIC_TESTS"] = "1"
         return env
 
-    def converse(self, request):
+    def converse(self, request, cancel_event=None):
         """Returns a contract response dict. Never raises for runtime problems."""
         try:
             request = c.validate_request(request)
@@ -71,19 +71,19 @@ class HermesBridge:
                 return c.response(request_id, "error", error=("duplicate_request", "Ya hay un pedido activo con ese request_id"))
             self._active[request_id] = run
         try:
-            return self._execute(request, run)
+            return self._execute(request, run, cancel_event)
         finally:
             with self._lock:
                 if self._active.get(request_id) is run:
                     del self._active[request_id]
 
-    def _execute(self, request, run):
+    def _execute(self, request, run, cancel_event=None):
         request_id = request["request_id"]
         started = time.monotonic()
         # Empty working directory: Hermes probes the cwd (git, AGENTS.md); give it nothing to read.
         with tempfile.TemporaryDirectory(prefix="arkos-hermes-") as cwd:
             with run.lock:
-                if run.cancelled:
+                if run.cancelled or (cancel_event is not None and cancel_event.is_set()):
                     return c.response(request_id, "cancelled", error=("cancelled", "Cancelado por el usuario"))
                 try:
                     run.process = subprocess.Popen(self._command(), cwd=cwd, env=self._env(), stdin=subprocess.PIPE,
@@ -98,11 +98,21 @@ class HermesBridge:
             for thread in threads:
                 thread.start()
             timed_out = False
-            try:
-                process.wait(timeout=request["timeout_s"])
-            except subprocess.TimeoutExpired:
-                timed_out = True
-                self._kill(process)
+            deadline = time.monotonic() + request["timeout_s"]
+            while process.poll() is None:
+                if cancel_event is not None and cancel_event.is_set():
+                    run.cancelled = True
+                    self._kill(process)
+                    break
+                remaining = deadline - time.monotonic()
+                if remaining <= 0:
+                    timed_out = True
+                    self._kill(process)
+                    break
+                try:
+                    process.wait(timeout=min(.05, remaining))
+                except subprocess.TimeoutExpired:
+                    pass
             for thread in threads:
                 thread.join(timeout=10)
             for stream in (process.stdin, process.stdout, process.stderr):

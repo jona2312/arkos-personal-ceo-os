@@ -49,4 +49,11 @@ El ejemplo directo presupone un Python real ya instalado. Fuera de Windows, indi
 
 Pruebas nuevas: diagnóstico sin estado, FFmpeg ausente, puerto ocupado, disposición inválida preservada, configuración relay parcial/ausente, errores comprensibles y apertura real por subprocess hasta consulta privada de una cola vacía. CI Windows también analiza PowerShell y ejecuta `Open-Arkos.ps1 -CheckOnly`, verificando que no cree estado y restaure el ajuste del administrador Python. Falta la prueba en la PC del usuario.
 
+La aceptación posterior en esta PC y la corrección de restauración del entorno
+están en [CONVERSATION_ACCEPTANCE_2026-10-09.md](CONVERSATION_ACCEPTANCE_2026-10-09.md).
+El launcher conserva presencia y valor originales de las cuatro variables Python;
+distingue ausente de vacía cuando el runtime permite conservar una variable vacía.
+Test-ArkosLauncherEnvironment.ps1 verifica éxito, retorno no exitoso y excepciones,
+además de confirmar que CheckOnly no crea estado.
+
 Esto es un launcher de prueba, no un instalador empaquetado para distribución pública. No crea acceso directo, servicio ni tarea programada; no reemplaza Hermes ni el launcher previo.
