@@ -5,6 +5,9 @@
   let polling = false, mode = 'unconfigured';
   function remember(rid) { try { if(rid)sessionStorage.setItem('arkos-chat-last-turn',rid);else sessionStorage.removeItem('arkos-chat-last-turn'); } catch { /* history remains in this page */ } }
   const log = $('chat-log'), input = $('chat-input');
+  input.addEventListener('keydown',event=>{
+    if(event.key==='Enter'&&!event.shiftKey&&!event.isComposing){event.preventDefault();$('chat-form').requestSubmit();}
+  });
   function status(value, message) {
     document.documentElement.dataset.chat = value;
     $('chat-state').textContent = message;
@@ -46,6 +49,7 @@
       const row=message('assistant',result.reply);
       for(const p of result.proposals) row.append(proposalCard(rid,p,turn.created_tasks[p.proposal_id]));
     } else {
+      if(turn.state!=='cancelled')input.value=turn.request.messages.at(-1).content;
       log.append(element('p','chat-outcome',turn.state==='cancelled' ? 'Turno cancelado. Sin propuestas ni tareas nuevas.' :
         turn.state==='timeout' ? 'Se agotó el tiempo de espera. Sin propuestas ni tareas nuevas.' :
         'No se pudo completar el turno. Sin propuestas ni tareas nuevas.'));
@@ -91,6 +95,7 @@
       if(pending!==submitted)return;
       if(e.status){
         pending=null;cancelRequested=false;
+        input.value=text;
         remember(null);
         log.append(element('p','chat-outcome',e.message));
         status('error',e.message);return;
@@ -116,7 +121,7 @@
       finish(turn);if(pending)poll();
     } catch(e) {
       if(pending!==submitted)return;
-      if(e.status){pending=null;cancelRequested=false;remember(null);$('chat-retry').hidden=true;}
+      if(e.status){input.value=submitted.messages.at(-1).content;pending=null;cancelRequested=false;remember(null);$('chat-retry').hidden=true;}
       status('error',e.message);
     }
     finally{$('chat-retry').disabled=false;}

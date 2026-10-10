@@ -92,11 +92,14 @@ async function refresh() {
   } finally {state.refreshing = false; render();}
 }
 function page(name) {
-  if(name==='conversation'){name='home';setTimeout(()=>$('chat-input').focus(),0);}
   if (!pages[name]) return; state.page = name;
-  document.querySelectorAll('.page').forEach(p => p.hidden = p.id !== 'page-' + name);
+  document.documentElement.dataset.view=name;
+  const section=name==='conversation'?'home':name;
+  document.querySelectorAll('.page').forEach(p => p.hidden = p.id !== 'page-' + section);
   document.querySelectorAll('[data-page]').forEach(b => {b.classList.toggle('active',b.dataset.page === name); if(b.dataset.page===name)b.setAttribute('aria-current','page');else b.removeAttribute('aria-current');});
   $('breadcrumb-page').textContent = pages[name]; window.scrollTo({top:0});
+  if(name==='conversation')$('chat-input').focus({preventScroll:true});
+  requestAnimationFrame(renderTaskRoutes);
 }
 function setKind(kind) {$('task-kind').value = kind; $('note-fields').hidden = kind !== 'note'; $('clip-fields').hidden = kind !== 'clip'; $('note-text').required = kind === 'note'; $('clip-source').required = kind === 'clip';}
 function newTask(kind='note', content='') {if (!state.online) return toast('Abrí ARKOS local para guardar tareas.');$('task-form').reset();$('create-error').textContent='';setKind(kind);$('note-text').value=content;$('task-dialog').showModal();(kind==='note'?$('note-text'):$('clip-source')).focus();}
@@ -145,7 +148,8 @@ $('quick-clip').addEventListener('click',()=>newTask('clip'));
 document.querySelectorAll('.close-dialog').forEach(b=>b.addEventListener('click',()=>b.closest('dialog').close()));
 function theme(kind,value){if(kind==='theme'&&!['dark','light'].includes(value))value='dark';if(kind==='accent'&&!['neural','blue','red','violet','mono'].includes(value))value='neural';document.documentElement.dataset[kind]=value;storage.set('arkos-'+kind,value);document.querySelectorAll('[data-'+kind+'-choice]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset[kind+'Choice']===value)));}
 $('appearance-button').addEventListener('click',()=>$('appearance-dialog').showModal());
-const mobileAppearance=element('button','icon-button','◐');mobileAppearance.setAttribute('aria-label','Personalizar apariencia');mobileAppearance.addEventListener('click',()=>$('appearance-dialog').showModal());document.querySelector('.top-actions').prepend(mobileAppearance);
+$('settings-button').addEventListener('click',()=>$('appearance-dialog').showModal());
+$('messages-button').addEventListener('click',()=>{page('home');$('inbox-title').focus();$('inbox-title').scrollIntoView({block:'center'});});
 document.querySelectorAll('[data-theme-choice]').forEach(b=>b.addEventListener('click',()=>theme('theme',b.dataset.themeChoice)));
 document.querySelectorAll('[data-accent-choice]').forEach(b=>b.addEventListener('click',()=>theme('accent',b.dataset.accentChoice)));
 // Notices are derived from the actual task snapshot; no messages are invented.
@@ -196,16 +200,45 @@ theme('theme',storage.get('arkos-theme')||'dark');theme('accent',storage.get('ar
 ArkosNeural.mount($('neural-backdrop'));
 const networkLabels={offline:'Actividad local: sin actualizar · pulsos detenidos',running:'Actividad local: hay tareas ejecutándose',queued:'Actividad local: tareas en cola · esperando ejecución',review:'Actividad local: tareas por revisar',idle:'Actividad local: en reposo',completed:'Actividad local: una tarea acaba de terminar'};
 let observedStates=null,completionUntil=0;
+const recentCompletions=new Map();
 function renderNeuralActivity(){
   if(state.online){
-    if(observedStates)for(const task of state.tasks)if(task.state==='completed'&&observedStates.has(task.id)&&observedStates.get(task.id)!=='completed')completionUntil=Date.now()+10000;
+    if(observedStates)for(const task of state.tasks)if(task.state==='completed'&&observedStates.has(task.id)&&observedStates.get(task.id)!=='completed'){
+      completionUntil=Date.now()+1700;recentCompletions.set(task.id,completionUntil);
+      setTimeout(()=>{renderNeuralActivity();},1750);
+    }
     observedStates=new Map(state.tasks.map(t=>[t.id,t.state]));
   }
+  for(const [id,until] of recentCompletions)if(until<=Date.now()||!state.online)recentCompletions.delete(id);
   let value=ArkosNeural.activity(state.tasks,state.online);
   if(state.online&&value!=='running'&&Date.now()<completionUntil)value='completed';
   document.documentElement.dataset.activity=value;
   const label=networkLabels[value];if($('network-status').textContent!==label)$('network-status').textContent=label;
+  requestAnimationFrame(renderTaskRoutes);
 }
+// Up to three paths to actual visible local cards. Relay and chat never enter here.
+function renderTaskRoutes(){
+  const svg=$('task-routes');svg.replaceChildren();
+  document.querySelectorAll('.task-card.just-completed').forEach(card=>card.classList.remove('just-completed'));
+  if(!state.online||state.page!=='home')return;
+  const stage=$('workstage').getBoundingClientRect(),core=document.querySelector('.reactor').getBoundingClientRect();
+  if(!stage.width)return;
+  svg.setAttribute('viewBox',`0 0 ${stage.width} ${stage.height}`);
+  const cards=[...document.querySelectorAll('#home-board .task-card')].filter(card=>card.dataset.state==='running'||recentCompletions.has(card.dataset.taskId)).slice(0,3);
+  for(const card of cards){
+    const done=recentCompletions.has(card.dataset.taskId),box=card.getBoundingClientRect();
+    card.classList.toggle('just-completed',done);
+    const sx=core.left+core.width/2-stage.left,sy=core.bottom-stage.top;
+    const ex=box.left+box.width/2-stage.left,ey=box.top-stage.top;
+    const d=`M${sx} ${sy} C${sx} ${ey-32} ${ex} ${sy+32} ${ex} ${ey}`;
+    const path=document.createElementNS('http://www.w3.org/2000/svg','path');
+    path.setAttribute('d',d);path.setAttribute('class','task-route-track');svg.append(path);
+    const dot=document.createElementNS('http://www.w3.org/2000/svg','circle');
+    dot.setAttribute('r','3');dot.setAttribute('class','task-route-packet'+(done?' returning':''));
+    dot.style.offsetPath=`path('${d}')`;svg.append(dot);
+  }
+}
+new ResizeObserver(()=>requestAnimationFrame(renderTaskRoutes)).observe($('workstage'));
 function visualPreference(kind,value){
   const options=kind==='glow'?['low','medium','high','off']:['lite','full'];
   if(!options.includes(value))value=options[0];
