@@ -55,7 +55,7 @@ async function main(){
   assert.equal(await page.locator('#inbox-count').textContent(),'3');
   assert.match(await page.locator('#local-clock').textContent(),/\d{2}:\d{2}/);
   assert.match(await page.locator('#panel-duration').textContent(),/\d{2}:\d{2}:\d{2}/);
-  await page.getByRole('button',{name:'Voz live',exact:false}).first().click();
+  await page.getByRole('button',{name:'Voz · próximamente',exact:true}).first().click();
   assert.match(await page.locator('#feature-copy').textContent(),/no enciende el micrófono/);
   await page.locator('#feature-dialog').getByRole('button',{name:'Cerrar',exact:true}).click();
   await page.evaluate(()=>{document.activeElement.blur();window.scrollTo(0,0);});
@@ -101,7 +101,7 @@ async function main(){
   await page.getByRole('button',{name:'Personalizar apariencia',exact:true}).click();
   await page.getByRole('button',{name:'Activado',exact:true}).click();
   await page.locator('#appearance-dialog').getByRole('button',{name:'Cerrar',exact:true}).click();
-  assert.equal(await page.locator('.ring-one').evaluate(el=>getComputedStyle(el).animationPlayState),'running');
+  assert.equal(await page.locator('.ring-one').evaluate(el=>getComputedStyle(el).animationName),'none'); // Idle nucleus is stable.
   await page.emulateMedia({reducedMotion:'reduce'});
   assert.equal(await page.locator('.ring-one').evaluate(el=>getComputedStyle(el).animationName),'none');
   await page.emulateMedia({reducedMotion:'no-preference'});
@@ -136,7 +136,7 @@ async function main(){
   await page.locator('[data-page="tasks"]').click();
   await page.getByLabel('Buscar una tarea').fill('Plan para mañana');
   assert.equal(await page.locator('#tasks-list .task-card').count(),1);
-  await page.locator('[data-page="conversation"]').click();
+  await page.locator('[data-page="home"]').click();
   await page.getByRole('button',{name:'Preparador de tareas · reglas locales',exact:true}).click();
   await page.getByLabel('¿Qué te gustaría resolver?').fill('Quiero recortar un video');
   await page.getByRole('button',{name:'Preparar pedido'}).click();
@@ -146,14 +146,17 @@ async function main(){
   assert.match(await page.locator('#connections-grid').textContent(),/WhatsApp/);
   assert.match(await page.locator('#connections-grid').textContent(),/Sincronización pendiente/);
   // Synthetic local state response checks visuals only, not executor telemetry.
+  await page.locator('[data-page="home"]').click();
   const localTasks=await page.evaluate(async()=>{const r=await fetch('/api/tasks',{headers:{'X-Arkos-Key':sessionStorage.getItem('arkos-session-key')}});return r.json();});
   const runningFixture={tasks:[{...localTasks.tasks[0],state:'running'}]};
   await page.route('**/api/tasks',route=>route.fulfill({json:runningFixture}));
   await page.getByRole('button',{name:'Actualizar tareas',exact:true}).click();
   await page.waitForFunction(()=>document.documentElement.dataset.activity==='running');
-  assert.equal(await page.locator('.neural-signals').evaluate(el=>getComputedStyle(el).animationPlayState),'running');
+  await page.locator('.task-route-packet').waitFor({state:'attached'});
+  await page.bringToFront();
+  await page.waitForFunction(()=>getComputedStyle(document.querySelector('.task-route-packet')).animationName==='task-delivery');
   await page.emulateMedia({reducedMotion:'reduce'});
-  assert.equal(await page.locator('.neural-signals').evaluate(el=>getComputedStyle(el).animationName),'none');
+  await page.waitForFunction(()=>getComputedStyle(document.querySelector('.task-route-packet')).animationName==='none');
   await page.emulateMedia({reducedMotion:'no-preference'});
   runningFixture.tasks[0].state='completed';
   await page.getByRole('button',{name:'Actualizar tareas',exact:true}).click();

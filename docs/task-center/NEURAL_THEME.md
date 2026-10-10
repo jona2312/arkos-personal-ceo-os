@@ -1,5 +1,14 @@
 # Tema neuronal aprobado
 
+Actualización sobre #10: ver [entrada al asistente](ASSISTANT_ENTRY_2026-10-10.md).
+El núcleo ahora mide 150 px en escritorio y 80 px en móvil, permanece estable
+en reposo y pulsa solo durante la espera de chat. La red de fondo es estática.
+Hasta tres recorridos van hacia tarjetas locales running o vuelven después de
+una transición observada a completed (1,7 s); el destello dura 0,6 s.
+Esto reemplaza la rotación decorativa permanente y los pulsos generales descritos
+en el antecedente de #9 que sigue abajo. Ligero, pausa, pestaña oculta y movimiento
+reducido detienen los efectos; relay nunca se usa como autoridad de ejecución.
+
 Tema predeterminado negro, dorado y rojo con una red SVG detrás de paneles oscuros. La propuesta de imagen fue aprobada por Jona; la implementación mantiene colores semánticos adicionales para distinguir resultados y errores. No representa una red neuronal real ni razonamiento interno del modelo.
 
 ## Controles

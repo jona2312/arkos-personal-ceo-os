@@ -1,0 +1,221 @@
+{
+  "status": "PASS",
+  "runner": "synthetic HermesBridge subprocess; no Qwen",
+  "geometry": {
+    "width": 1512,
+    "scroll": 1497,
+    "scale": 1,
+    "dpr": 1
+  },
+  "mobileGeometry": {
+    "width": 390,
+    "scroll": 375,
+    "scale": 1,
+    "quality": "lite"
+  },
+  "layoutChecks": [
+    {
+      "width": 360,
+      "height": 800,
+      "zoomEquivalent": 1,
+      "scroll": 345,
+      "inputBottom": 476.6875,
+      "sendBottom": 532.6875,
+      "coreWidth": 80,
+      "quality": "lite"
+    },
+    {
+      "width": 288,
+      "height": 640,
+      "zoomEquivalent": 1.25,
+      "scroll": 273,
+      "inputBottom": 513.6875,
+      "sendBottom": 569.6875,
+      "coreWidth": 80,
+      "quality": "lite"
+    },
+    {
+      "width": 390,
+      "height": 844,
+      "zoomEquivalent": 1,
+      "scroll": 375,
+      "inputBottom": 476.6875,
+      "sendBottom": 532.6875,
+      "coreWidth": 80,
+      "quality": "lite"
+    },
+    {
+      "width": 312,
+      "height": 675,
+      "zoomEquivalent": 1.25,
+      "scroll": 297,
+      "inputBottom": 476.6875,
+      "sendBottom": 532.6875,
+      "coreWidth": 80,
+      "quality": "lite"
+    },
+    {
+      "width": 768,
+      "height": 1024,
+      "zoomEquivalent": 1,
+      "scroll": 753,
+      "inputBottom": 501.296875,
+      "sendBottom": 557.296875,
+      "coreWidth": 150,
+      "quality": "full"
+    },
+    {
+      "width": 614,
+      "height": 819,
+      "zoomEquivalent": 1.25,
+      "scroll": 599,
+      "inputBottom": 476.6875,
+      "sendBottom": 532.6875,
+      "coreWidth": 80,
+      "quality": "lite"
+    },
+    {
+      "width": 1366,
+      "height": 768,
+      "zoomEquivalent": 1,
+      "scroll": 1351,
+      "inputBottom": 499.296875,
+      "sendBottom": 555.296875,
+      "coreWidth": 150,
+      "quality": "full"
+    },
+    {
+      "width": 1092,
+      "height": 614,
+      "zoomEquivalent": 1.25,
+      "scroll": 1077,
+      "inputBottom": 490.296875,
+      "sendBottom": 546.296875,
+      "coreWidth": 150,
+      "quality": "full"
+    },
+    {
+      "width": 1920,
+      "height": 1080,
+      "zoomEquivalent": 1,
+      "scroll": 1905,
+      "inputBottom": 505.296875,
+      "sendBottom": 561.296875,
+      "coreWidth": 150,
+      "quality": "full"
+    },
+    {
+      "width": 1536,
+      "height": 864,
+      "zoomEquivalent": 1.25,
+      "scroll": 1521,
+      "inputBottom": 505.296875,
+      "sendBottom": 561.296875,
+      "coreWidth": 150,
+      "quality": "full"
+    }
+  ],
+  "contrastChecks": [
+    {
+      "theme": "dark",
+      "samples": [
+        {
+          "selector": "#chat-form label",
+          "ratio": 18.09522939820816,
+          "fontSize": "16px"
+        },
+        {
+          "selector": ".chat-state",
+          "ratio": 8.857114044002651,
+          "fontSize": "14px"
+        },
+        {
+          "selector": ".chat-message p",
+          "ratio": 18.09522939820816,
+          "fontSize": "16px"
+        },
+        {
+          "selector": ".task-card .excerpt",
+          "ratio": 9.650674744777724,
+          "fontSize": "15px"
+        },
+        {
+          "selector": ".notice-copy p",
+          "ratio": 9.650674744777724,
+          "fontSize": "15px"
+        },
+        {
+          "selector": ".task-card .status-pill",
+          "ratio": 5.309707266765406,
+          "fontSize": "12px"
+        }
+      ]
+    },
+    {
+      "theme": "light",
+      "samples": [
+        {
+          "selector": "#chat-form label",
+          "ratio": 13.984741082580806,
+          "fontSize": "16px"
+        },
+        {
+          "selector": ".chat-state",
+          "ratio": 6.286700476620706,
+          "fontSize": "14px"
+        },
+        {
+          "selector": ".chat-message p",
+          "ratio": 13.984741082580806,
+          "fontSize": "16px"
+        },
+        {
+          "selector": ".task-card .excerpt",
+          "ratio": 5.632329425368075,
+          "fontSize": "15px"
+        },
+        {
+          "selector": ".notice-copy p",
+          "ratio": 5.632329425368075,
+          "fontSize": "15px"
+        },
+        {
+          "selector": ".task-card .status-pill",
+          "ratio": 5.417537307169885,
+          "fontSize": "12px"
+        }
+      ]
+    }
+  ],
+  "performanceSamples": [
+    {
+      "quality": "full",
+      "seconds": 1.1094129999983124,
+      "rendererTaskSeconds": 0.063443,
+      "heapBytes": 5744572
+    },
+    {
+      "quality": "lite",
+      "seconds": 1.1103690000018105,
+      "rendererTaskSeconds": 0.005167999999999992,
+      "heapBytes": 6740440
+    }
+  ],
+  "errors": [],
+  "autoExecutionRequests": 0,
+  "tests": [
+    "history",
+    "proposal pending",
+    "double click",
+    "cancel",
+    "invalid response",
+    "XSS",
+    "task polling while waiting",
+    "full/lite/pause/reduced motion",
+    "voice/team pending",
+    "keyboard and draft recovery",
+    "task routes and completion expiry",
+    "responsive entry",
+    "measured text contrast"
+  ]
+}

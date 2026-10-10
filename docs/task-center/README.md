@@ -6,6 +6,9 @@ La portada incorpora conversación escrita mediante HermesBridge: ver
 [aceptación Windows](CONVERSATION_ACCEPTANCE_2026-10-09.md).
 Sin configuración explícita muestra “Hermes por conectar”; el runner sintético
 solo se habilita desde un script separado de aceptación.
+La [revisión visual del 10 de octubre](ASSISTANT_ENTRY_2026-10-10.md) aplica
+las referencias Higgsfield sobre ese mismo chat: entrada prioritaria, núcleo
+compacto, vista de conversación y recorridos ligados a tareas locales observadas.
 It is a local browser application, not a Hermes Desktop plugin, a cloud service,
 a mobile pairing service or an installed PWA. It requires Python 3.11+ and no new
 runtime packages. The interface, fonts and assets are local; no CDN or external
