@@ -2,7 +2,8 @@
 
 Estado: base de integración. Local conserva HermesBridge. Cloud tiene adaptador y gateway con
 transporte simulado (`docs/CLOUD_ADAPTER.md`), pero sigue deshabilitado en el selector y la UI;
-el despliegue está propuesto en `docs/CLOUD_DEPLOYMENT_PROPOSAL.md`.
+el despliegue está propuesto en `docs/CLOUD_DEPLOYMENT_PROPOSAL.md`. La pantalla ofrece Local/Cloud
+contra un proveedor falso (`docs/CLOUD_UI_INTEGRATION.md`); la activación real sigue bloqueada.
 Este documento y su selector no prueban una conexión a Qwen ni aislamiento del sistema operativo.
 
 ## Lo que cambia ahora

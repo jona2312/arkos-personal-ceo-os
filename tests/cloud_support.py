@@ -10,7 +10,8 @@ TOKEN_A = "akc_" + "a" * 40
 TOKEN_B = "akc_" + "b" * 40
 DISCLOSURE = dict(policy_version="2026-10-11", provider="synthetic-llm", model="synthetic-model-1",
                   region="test", provider_retention_days=30, gateway_retention_hours=24,
-                  max_input_chars=12000, max_output_tokens=1024)
+                  max_input_chars=12000, max_output_tokens=1024, per_user_daily_micro_usd=100_000,
+                  global_daily_micro_usd=1_000_000, global_monthly_micro_usd=31_000_000, terms_verified=False)
 
 
 def client_config(**disclosure):
@@ -18,16 +19,30 @@ def client_config(**disclosure):
                                           disclosure=dict(DISCLOSURE, **disclosure)))
 
 
-def gateway_config(user_budget=100_000, global_budget=1_000_000, prices=(1_000_000, 5_000_000, 0, 1_000_000, 5_000_000),
+def gateway_config(user_budget=None, global_budget=None, prices=(1_000_000, 5_000_000, 0, 1_000_000, 5_000_000),
                    monthly_budget=None, **disclosure):
+    """Budgets are part of the disclosure; the client must use the same values to keep consent valid."""
     base_in, base_out, threshold, long_in, long_out = prices
-    return GatewayConfig.from_mapping(dict(disclosure=dict(DISCLOSURE, **disclosure),
+    limits = dict(DISCLOSURE)
+    limits.update(disclosure)
+    if user_budget is not None:
+        limits["per_user_daily_micro_usd"] = user_budget
+    if global_budget is not None:
+        limits["global_daily_micro_usd"] = global_budget
+    if monthly_budget is not None:
+        limits["global_monthly_micro_usd"] = monthly_budget
+    elif global_budget is not None:
+        limits["global_monthly_micro_usd"] = max(global_budget * 31, limits["global_daily_micro_usd"])
+    return GatewayConfig.from_mapping(dict(disclosure=limits,
                                            input_micro_usd_per_mtok=base_in, output_micro_usd_per_mtok=base_out,
                                            long_context_threshold_tokens=threshold,
-                                           long_input_micro_usd_per_mtok=long_in, long_output_micro_usd_per_mtok=long_out,
-                                           per_user_daily_micro_usd=user_budget, global_daily_micro_usd=global_budget,
-                                           global_monthly_micro_usd=global_budget * 31 if monthly_budget is None
-                                           else monthly_budget))
+                                           long_input_micro_usd_per_mtok=long_in, long_output_micro_usd_per_mtok=long_out))
+
+
+def matching_client_config(gateway):
+    """Client config whose disclosure equals the gateway's (same consent digest)."""
+    data = {k: v for k, v in gateway.disclosure.__dict__.items()}
+    return ClientConfig.from_mapping(dict(gateway_url="https://gateway.arkos.invalid", timeout_s=30, disclosure=data))
 
 
 # Claude Haiku 5.5 list prices, platform.claude.com/docs/en/about-claude/pricing, read 2026-10-11:
@@ -40,6 +55,8 @@ TOKENS = {token_hash(TOKEN_A): "user-a", token_hash(TOKEN_B): "user-b"}
 
 class SimulatedProvider:
     """behaviour: ok | lost | not_sent | rejected | no_usage | huge, or a callable."""
+
+    mode = "test"  # declares itself a fake to the gateway's /v1/status
 
     def __init__(self, behaviour="ok", text="Hola, soy una respuesta sintética.", hold=None, usage=(120, 40)):
         self.behaviour, self.text, self.usage = behaviour, text, usage

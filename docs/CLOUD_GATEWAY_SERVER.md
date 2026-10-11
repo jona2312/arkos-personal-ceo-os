@@ -34,7 +34,10 @@ Mapeo de errores del proveedor (lo ambiguo se trata como incierto y nunca se rei
 - Modelo `claude-haiku-5-5`; effort `low`; `max_input_chars` 12.000; `max_output_tokens` 2.048.
 - Precios en µUSD/MTok: 100.000 / 500.000; desde 100.000 tokens de prompt, 500.000 / 2.500.000
   (lista oficial consultada el 2026-10-11).
-- Topes: USD 0,20 por usuario por día, USD 1 global por día, **USD 10 global por mes**.
+- Topes: USD 0,20 por usuario por día, USD 1 global por día, **USD 10 global por mes**. Viven en
+  `disclosure` (la persona los consiente; cambiarlos exige renovar el consentimiento) y el gateway
+  aplica exactamente esos valores.
+- `terms_verified: false`: con proveedor real, `serve` no arranca y la pantalla bloquea la activación.
 - Retención de respuestas en el gateway: **0 h**.
 - `provider_retention_days` = 30 es un **valor a confirmar** con la política y el contrato vigentes
   del proveedor antes de staging. Cambiarlo invalida los consentimientos, como cualquier otro campo.

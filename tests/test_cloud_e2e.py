@@ -240,11 +240,10 @@ class CloudEndToEndTests(unittest.TestCase):
         self.assertEqual(len(self.fake.requests), 1)
 
     def test_monthly_cap_is_enforced_by_the_gateway(self):
-        self.stop_gateway()
-        self.start_gateway(pilot_gateway_config(global_monthly_micro_usd=1_000_000))
         ledger, day = self.gateway.ledger, utc_day()
         first_day = day[:8] + "01"
-        ledger.reserve("operator", "seed-0001", "d", 999_000, first_day, 10**9, 10**9)  # earlier spend this month
+        # Pilot cap: USD 10 per month. Seed USD 9.9995 of earlier spend this month.
+        ledger.reserve("operator", "seed-0001", "d", 9_999_500, first_day, 10**9, 10**9)
         self.assertEqual(self.adapter().converse(request())["error"]["code"], "budget_exhausted")
         self.assertEqual(self.fake.requests, [])
 

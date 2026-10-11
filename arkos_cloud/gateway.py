@@ -245,6 +245,16 @@ class CloudGateway:
         except LedgerError:
             return None
 
+    @property
+    def provider_mode(self):
+        """'test' only for providers that declare it (local fakes); anything else counts as real."""
+        return "test" if getattr(self.provider, "mode", "real") == "test" else "real"
+
+    def status(self):
+        """What the PC must check before activation: same disclosure, and test vs real provider."""
+        return {"disclosure_digest": self.config.disclosure.digest(), "disclosure": self.config.disclosure.as_dict(),
+                "provider_mode": self.provider_mode}
+
     def cancel(self, user, rid):
         row = self.ledger.request_cancel(user, rid, day=utc_day(self.clock()))
         with self._lock:
@@ -265,6 +275,10 @@ class CloudGateway:
         user = self.authenticate(headers)
         if user is None:
             return 401, {"error": {"code": "unauthorized"}}
+        if path == "/v1/status":
+            if method != "GET":
+                return 405, {"error": {"code": "invalid_request"}}
+            return 200, self.status()
         match = _PATH.match(path)
         if not match:
             return 404, {"error": {"code": "not_found"}}

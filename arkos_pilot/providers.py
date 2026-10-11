@@ -31,11 +31,17 @@ def select_provider(bridge=None, mode='hermes'):
 
     'hermes' is the existing public mode name for the local adapter. 'synthetic'
     is an explicitly injected test adapter, never an implicit offline fallback.
-    Cloud is deliberately unavailable until its own acceptance is complete.
+    Cloud is accepted only as a CloudSessionGuard, which enforces consent, test-only activation
+    while provider terms are unverified, and Cloud-only history.
     Metadata describes intended processing, not proof of OS-level isolation.
     """
     if mode == 'cloud':
-        raise ValueError('Cloud no disponible: falta integrar consentimiento, cuotas y proveedor.')
+        # Only the guarded Cloud session (consent, activation rules, Cloud-only history) can be
+        # selected as Cloud; a bare adapter or any other object is refused. Never a fallback.
+        from .cloud_link import CloudSessionGuard
+        if not isinstance(bridge, CloudSessionGuard):
+            raise ValueError('Cloud no disponible: requiere la sesión Cloud con consentimiento y límites.')
+        return ProviderSelection(bridge, 'cloud', 'cloud')
     if mode not in ('hermes', 'synthetic'):
         raise ValueError('Modo de conversación no soportado.')
     if bridge is None:

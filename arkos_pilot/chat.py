@@ -19,8 +19,9 @@ class ChatError(ValueError):
 
 
 class Conversations:
-    def __init__(self, root, bridge=None, mode='hermes'):
+    def __init__(self, root, bridge=None, mode='hermes', source_prefix='chat'):
         selected = select_provider(bridge, mode)
+        self.source_prefix = source_prefix  # keeps task idempotency keys of each mode apart
         self.root, self.bridge = root, selected.bridge
         self.mode, self.processing = selected.mode, selected.processing
         self.lock = threading.RLock()
@@ -74,12 +75,15 @@ class Conversations:
             result = self.bridge.converse(turn['request'], cancel_event=turn['cancel'])
             result = c.validate_response(result, rid)
             # Browser receives display fields only, never runtime diagnostics/paths.
+            code = (result.get('error') or {}).get('code')
             result = {k: result[k] for k in ('status', 'reply', 'proposals')}
             if result['status'] != 'ok':
                 result['error'] = 'El turno no se completó. No se creó ninguna tarea.'
+                # Contract error codes only (never provider text): the screen explains each one.
+                result['error_code'] = code if code in c.ERROR_CODES else 'runner_failed'
         except Exception:
-            result = dict(status='error', reply='', proposals=[],
-                          error='No se pudo obtener una respuesta válida de Hermes.')
+            result = dict(status='error', reply='', proposals=[], error_code='runner_failed',
+                          error='No se pudo obtener una respuesta válida.')
         with self.lock:
             if turn['cancel'].is_set():
                 result = dict(status='cancelled', reply='', proposals=[])
@@ -114,7 +118,7 @@ class Conversations:
             validate(payload)
             queue = Queue(self.root)
             try:
-                task = queue.add(payload, source_key='chat:'+rid+':'+proposal_id)
+                task = queue.add(payload, source_key=self.source_prefix+':'+rid+':'+proposal_id)
             finally:
                 queue.close()
             turn['created_tasks'][proposal_id] = task['id']

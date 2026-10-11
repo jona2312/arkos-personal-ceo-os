@@ -99,6 +99,10 @@ def _serve(args):
         return 2
     try:
         provider = AnthropicProvider(config.disclosure.model, key, base_url=os.environ.get(TEST_BASE_URL_ENV) or None)
+        if provider.mode == "real" and not config.disclosure.terms_verified:
+            provider.close()
+            raise ValueError("Proveedor real bloqueado: las condiciones (retención, límites, precios) no están "
+                             "verificadas en la configuración (terms_verified=false).")
         gateway = CloudGateway(config, args.ledger, provider)
     except (RuntimeError, ValueError) as exc:
         print(str(exc), file=sys.stderr)

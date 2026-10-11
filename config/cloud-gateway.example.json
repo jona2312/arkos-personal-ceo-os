@@ -7,14 +7,15 @@
     "provider_retention_days": 30,
     "gateway_retention_hours": 0,
     "max_input_chars": 12000,
-    "max_output_tokens": 2048
+    "max_output_tokens": 2048,
+    "per_user_daily_micro_usd": 200000,
+    "global_daily_micro_usd": 1000000,
+    "global_monthly_micro_usd": 10000000,
+    "terms_verified": false
   },
   "input_micro_usd_per_mtok": 100000,
   "output_micro_usd_per_mtok": 500000,
   "long_context_threshold_tokens": 100000,
   "long_input_micro_usd_per_mtok": 500000,
-  "long_output_micro_usd_per_mtok": 2500000,
-  "per_user_daily_micro_usd": 200000,
-  "global_daily_micro_usd": 1000000,
-  "global_monthly_micro_usd": 10000000
+  "long_output_micro_usd_per_mtok": 2500000
 }

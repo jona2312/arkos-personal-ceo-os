@@ -24,7 +24,7 @@ from arkos_pilot.core import Queue
 from arkos_pilot.providers import select_provider
 from arkos_pilot.task_center import TaskCenter
 from tests.cloud_support import (DISCLOSURE, HAIKU_5_5, TOKEN_A, TOKEN_B, TOKENS, InProcessTransport,
-                                 SimulatedProvider, client_config, gateway_config)
+                                 SimulatedProvider, client_config, gateway_config, matching_client_config)
 
 ROOT = Path(__file__).resolve().parents[1]
 PROPOSAL_TEXT = ('Te propongo una nota.\n```arkos-proposal\n'
@@ -39,10 +39,10 @@ class Rig:
     def __init__(self, tmp, provider=None, fault=None, consent=True, delay=None, gateway=None, config=None):
         self.tmp = Path(tmp)
         self.provider = provider or SimulatedProvider()
-        self.gateway = CloudGateway(gateway or gateway_config(), self.tmp / "gw" / "ledger.sqlite3",
-                                    self.provider, TOKENS)
+        gateway = gateway or gateway_config()
+        self.gateway = CloudGateway(gateway, self.tmp / "gw" / "ledger.sqlite3", self.provider, TOKENS)
         self.transport = InProcessTransport(self.gateway, fault=fault, delay=delay)
-        self.config = config or client_config()
+        self.config = config or matching_client_config(gateway)
         self.consent = ConsentStore(self.tmp / "pc")
         if consent:
             self.consent.grant(self.config.disclosure, self.config.disclosure.digest()[:CONFIRM_CHARS])
@@ -660,8 +660,7 @@ class StagingReadinessRegressionTests(CloudTestCase):
 
     def test_reservation_covers_haiku_long_context_tier(self):
         rig = self.rig(gateway=gateway_config(prices=HAIKU_5_5, user_budget=10**7, global_budget=10**7,
-                                              max_input_chars=c.MAX_HISTORY_CHARS),
-                       config=client_config(max_input_chars=c.MAX_HISTORY_CHARS))
+                                              max_input_chars=c.MAX_HISTORY_CHARS))
         worst = c.validate_request(dict(v=1, request_id="cloud-req-0001",
                                         messages=[dict(role="user", content="😀" * 8000)] * 4))
         bound = rig.gateway.input_bound(worst)
@@ -789,9 +788,11 @@ class StagingReadinessRegressionTests(CloudTestCase):
 
     def test_gateway_change_of_provider_model_or_terms_requires_new_consent(self):
         for change in (dict(provider="other-llm"), dict(model="synthetic-model-2"), dict(provider_retention_days=90),
-                       dict(gateway_retention_hours=48), dict(policy_version="2026-12-01"), dict(max_output_tokens=2048)):
+                       dict(gateway_retention_hours=48), dict(policy_version="2026-12-01"), dict(max_output_tokens=2048),
+                       dict(per_user_daily_micro_usd=50_000), dict(global_monthly_micro_usd=40_000_000),
+                       dict(terms_verified=True)):
             with self.subTest(change=change):
-                rig = self.rig(gateway=gateway_config(**change))
+                rig = self.rig(gateway=gateway_config(**change), config=client_config())
                 self.assertEqual(rig.adapter.converse(request())["error"]["code"], "consent_required")
                 self.assertEqual(rig.provider.calls, [])
                 self.assertIsNone(rig.row())
@@ -848,7 +849,10 @@ class MonthlyBudgetTests(CloudTestCase):
         self.assertEqual((cfg.per_user_daily_micro_usd, cfg.global_daily_micro_usd, cfg.global_monthly_micro_usd),
                          (200_000, 1_000_000, 10_000_000))
         self.assertEqual((cfg.disclosure.model, cfg.disclosure.gateway_retention_hours), ("claude-haiku-5-5", 0))
-        del data["global_monthly_micro_usd"]
+        self.assertIs(cfg.disclosure.terms_verified, False)
+        client = json.loads((ROOT / "config" / "cloud-client.example.json").read_text(encoding="utf-8"))
+        self.assertEqual(client["disclosure"], data["disclosure"])  # same consent digest on both sides
+        del data["disclosure"]["global_monthly_micro_usd"]
         with self.assertRaises(ConfigError):
             GatewayConfig.from_mapping(data)
 

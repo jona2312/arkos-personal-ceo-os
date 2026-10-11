@@ -61,20 +61,36 @@ class Disclosure:
     gateway_retention_hours: int
     max_input_chars: int
     max_output_tokens: int
+    per_user_daily_micro_usd: int
+    global_daily_micro_usd: int
+    global_monthly_micro_usd: int
+    terms_verified: bool
 
     FIELDS = ("policy_version", "provider", "model", "region", "provider_retention_days",
-              "gateway_retention_hours", "max_input_chars", "max_output_tokens")
+              "gateway_retention_hours", "max_input_chars", "max_output_tokens", "per_user_daily_micro_usd",
+              "global_daily_micro_usd", "global_monthly_micro_usd", "terms_verified")
 
     @classmethod
     def from_mapping(cls, data):
         _strict(data, cls.FIELDS, "disclosure")
-        return cls(policy_version=_name(data["policy_version"], "policy_version"),
-                   provider=_name(data["provider"], "provider"), model=_name(data["model"], "model"),
-                   region=_name(data["region"], "region"),
-                   provider_retention_days=_int(data["provider_retention_days"], 0, 3650, "provider_retention_days"),
-                   gateway_retention_hours=_int(data["gateway_retention_hours"], 0, 72, "gateway_retention_hours"),
-                   max_input_chars=_int(data["max_input_chars"], 1, c.MAX_HISTORY_CHARS, "max_input_chars"),
-                   max_output_tokens=_int(data["max_output_tokens"], 16, 4096, "max_output_tokens"))
+        if type(data["terms_verified"]) is not bool:
+            raise ConfigError("terms_verified debe ser true o false")
+        d = cls(policy_version=_name(data["policy_version"], "policy_version"),
+                provider=_name(data["provider"], "provider"), model=_name(data["model"], "model"),
+                region=_name(data["region"], "region"),
+                provider_retention_days=_int(data["provider_retention_days"], 0, 3650, "provider_retention_days"),
+                gateway_retention_hours=_int(data["gateway_retention_hours"], 0, 72, "gateway_retention_hours"),
+                max_input_chars=_int(data["max_input_chars"], 1, c.MAX_HISTORY_CHARS, "max_input_chars"),
+                max_output_tokens=_int(data["max_output_tokens"], 16, 4096, "max_output_tokens"),
+                per_user_daily_micro_usd=_int(data["per_user_daily_micro_usd"], 0, 10**10, "presupuesto por usuario"),
+                global_daily_micro_usd=_int(data["global_daily_micro_usd"], 0, 10**11, "presupuesto global"),
+                global_monthly_micro_usd=_int(data["global_monthly_micro_usd"], 0, 10**12, "presupuesto mensual"),
+                terms_verified=data["terms_verified"])
+        if d.per_user_daily_micro_usd > d.global_daily_micro_usd:
+            raise ConfigError("El presupuesto por usuario no puede superar el global")
+        if d.global_daily_micro_usd > d.global_monthly_micro_usd:
+            raise ConfigError("El presupuesto diario global no puede superar el mensual")
+        return d
 
     def as_dict(self):
         body = asdict(self)
@@ -92,6 +108,10 @@ class Disclosure:
                 f"Retención del proveedor: {self.provider_retention_days} días (según su política)\n"
                 f"Retención en el gateway ARKOS: {self.gateway_retention_hours} h para no repetir cobros\n"
                 f"Límites: {self.max_input_chars} caracteres de entrada, {self.max_output_tokens} tokens de salida\n"
+                f"Gasto máximo: USD {self.per_user_daily_micro_usd / 1e6:.2f} por usuario por día, "
+                f"USD {self.global_daily_micro_usd / 1e6:.2f} global por día, "
+                f"USD {self.global_monthly_micro_usd / 1e6:.2f} global por mes\n"
+                f"Condiciones del proveedor: {'verificadas' if self.terms_verified else 'SIN VERIFICAR (solo prueba)'}\n"
                 f"Política {self.policy_version}. Cancelar no garantiza que el proveedor no haya procesado el pedido.")
 
 
@@ -122,8 +142,9 @@ class ClientConfig:
 
 @dataclass(frozen=True)
 class GatewayConfig:
-    """Server side only. Prices in micro-USD per million tokens; budgets in micro-USD per UTC
-    day, plus a global cap per UTC calendar month enforced by the gateway itself.
+    """Server side only. Prices in micro-USD per million tokens. Spending limits live in the
+    disclosure (so the person consents to them) and the gateway enforces exactly those: per
+    user per UTC day, global per UTC day and global per UTC calendar month.
 
     Prices must be the ones actually billed, multipliers included (e.g. inference_geo).
     long_context_threshold_tokens > 0 applies the long_* prices to a whole request whose
@@ -135,30 +156,30 @@ class GatewayConfig:
     long_context_threshold_tokens: int
     long_input_micro_usd_per_mtok: int
     long_output_micro_usd_per_mtok: int
-    per_user_daily_micro_usd: int
-    global_daily_micro_usd: int
-    global_monthly_micro_usd: int
+
+    @property
+    def per_user_daily_micro_usd(self):
+        return self.disclosure.per_user_daily_micro_usd
+
+    @property
+    def global_daily_micro_usd(self):
+        return self.disclosure.global_daily_micro_usd
+
+    @property
+    def global_monthly_micro_usd(self):
+        return self.disclosure.global_monthly_micro_usd
 
     @classmethod
     def from_mapping(cls, data):
         fields = ("disclosure", "input_micro_usd_per_mtok", "output_micro_usd_per_mtok",
-                  "long_context_threshold_tokens", "long_input_micro_usd_per_mtok",
-                  "long_output_micro_usd_per_mtok", "per_user_daily_micro_usd", "global_daily_micro_usd",
-                  "global_monthly_micro_usd")
+                  "long_context_threshold_tokens", "long_input_micro_usd_per_mtok", "long_output_micro_usd_per_mtok")
         _strict(data, fields, "gateway")
         cfg = cls(disclosure=Disclosure.from_mapping(data["disclosure"]),
                   input_micro_usd_per_mtok=_int(data["input_micro_usd_per_mtok"], 1, 10**9, "precio entrada"),
                   output_micro_usd_per_mtok=_int(data["output_micro_usd_per_mtok"], 1, 10**9, "precio salida"),
                   long_context_threshold_tokens=_int(data["long_context_threshold_tokens"], 0, 10**7, "umbral contexto largo"),
                   long_input_micro_usd_per_mtok=_int(data["long_input_micro_usd_per_mtok"], 1, 10**9, "precio entrada largo"),
-                  long_output_micro_usd_per_mtok=_int(data["long_output_micro_usd_per_mtok"], 1, 10**9, "precio salida largo"),
-                  per_user_daily_micro_usd=_int(data["per_user_daily_micro_usd"], 0, 10**10, "presupuesto por usuario"),
-                  global_daily_micro_usd=_int(data["global_daily_micro_usd"], 0, 10**11, "presupuesto global"),
-                  global_monthly_micro_usd=_int(data["global_monthly_micro_usd"], 0, 10**12, "presupuesto mensual"))
-        if cfg.per_user_daily_micro_usd > cfg.global_daily_micro_usd:
-            raise ConfigError("El presupuesto por usuario no puede superar el global")
-        if cfg.global_daily_micro_usd > cfg.global_monthly_micro_usd:
-            raise ConfigError("El presupuesto diario global no puede superar el mensual")
+                  long_output_micro_usd_per_mtok=_int(data["long_output_micro_usd_per_mtok"], 1, 10**9, "precio salida largo"))
         if (cfg.long_input_micro_usd_per_mtok < cfg.input_micro_usd_per_mtok
                 or cfg.long_output_micro_usd_per_mtok < cfg.output_micro_usd_per_mtok):
             raise ConfigError("Los precios de contexto largo no pueden ser menores que los base")
