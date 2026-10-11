@@ -2,6 +2,9 @@
 
 PC (consent; shows exactly what would be sent and to whom; accepting requires the code):
   python -m arkos_cloud consent --config cloud.json --state DIR [--accept CODE | --revoke]
+Gateway server (one instance per ledger; reads the provider key from ARKOS_CLOUD_PROVIDER_KEY):
+  python -m arkos_cloud serve --gateway-config gateway.json --ledger L [--host H --port P]
+                              [--tls-cert C --tls-key K | --behind-tls-proxy]
 Gateway operator (works while the gateway runs; changes apply to the next request):
   python -m arkos_cloud token issue  --ledger L --user U     (prints the akc_ token once)
   python -m arkos_cloud token revoke --ledger L (--user U | --prefix HASHPREFIX)
@@ -10,10 +13,13 @@ Gateway operator (works while the gateway runs; changes apply to the next reques
 """
 import argparse
 import json
+import os
 from pathlib import Path
+import signal
 import sys
+import threading
 
-from .config import ClientConfig, ConfigError
+from .config import ClientConfig, ConfigError, GatewayConfig
 from .consent import CONFIRM_CHARS, ConsentStore
 from .ledger import Ledger, LedgerError
 
@@ -45,7 +51,8 @@ def _consent(args):
 
 
 def _operator(args):
-    if not args.ledger.exists():
+    creating = args.command == "token" and args.action == "issue"
+    if not creating and not args.ledger.exists():
         print("Ledger inexistente.", file=sys.stderr)
         return 2
     ledger = Ledger(args.ledger)
@@ -73,6 +80,52 @@ def _operator(args):
         ledger.close()
 
 
+KEY_ENV = "ARKOS_CLOUD_PROVIDER_KEY"
+TEST_BASE_URL_ENV = "ARKOS_CLOUD_TEST_PROVIDER_URL"  # loopback fakes only; refused otherwise
+
+
+def _serve(args):
+    from .gateway import CloudGateway
+    from .provider_anthropic import AnthropicProvider
+    from .server import GatewayServer
+    try:
+        config = GatewayConfig.from_mapping(json.loads(args.gateway_config.read_text(encoding="utf-8")))
+    except (OSError, ValueError, ConfigError) as exc:
+        print(f"Configuración del gateway inválida: {exc}", file=sys.stderr)
+        return 2
+    key = os.environ.get(KEY_ENV, "")
+    if not key:
+        print(f"Falta {KEY_ENV} en el entorno del servidor.", file=sys.stderr)
+        return 2
+    try:
+        provider = AnthropicProvider(config.disclosure.model, key, base_url=os.environ.get(TEST_BASE_URL_ENV) or None)
+        gateway = CloudGateway(config, args.ledger, provider)
+    except (RuntimeError, ValueError) as exc:
+        print(str(exc), file=sys.stderr)
+        return 3
+    try:
+        server = GatewayServer(gateway, args.host, args.port, args.tls_cert, args.tls_key, args.behind_tls_proxy)
+    except (OSError, ValueError) as exc:
+        gateway.close()
+        print(str(exc), file=sys.stderr)
+        return 3
+    stop = threading.Event()
+    for name in ("SIGTERM", "SIGINT"):
+        if hasattr(signal, name):
+            signal.signal(getattr(signal, name), lambda *_: stop.set())
+    thread = threading.Thread(target=server.serve_forever, kwargs={"poll_interval": 0.2}, daemon=True)
+    thread.start()
+    print(json.dumps({"listening": server.url}), flush=True)
+    try:
+        while not stop.wait(0.5):
+            pass
+    finally:
+        server.shutdown()
+        server.server_close()
+        gateway.close()
+    return 0
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(prog="arkos_cloud")
     sub = parser.add_subparsers(dest="command", required=True)
@@ -87,6 +140,14 @@ def main(argv=None):
     token.add_argument("--ledger", type=Path, required=True)
     token.add_argument("--user")
     token.add_argument("--prefix")
+    serve = sub.add_parser("serve")
+    serve.add_argument("--gateway-config", type=Path, required=True)
+    serve.add_argument("--ledger", type=Path, required=True)
+    serve.add_argument("--host", default="127.0.0.1")
+    serve.add_argument("--port", type=int, default=8787)
+    serve.add_argument("--tls-cert")
+    serve.add_argument("--tls-key")
+    serve.add_argument("--behind-tls-proxy", action="store_true")
     reconcile = sub.add_parser("reconcile")
     reconcile.add_argument("--ledger", type=Path, required=True)
     reconcile.add_argument("--user", required=True)
@@ -95,6 +156,8 @@ def main(argv=None):
     args = parser.parse_args(argv)
     if args.command == "consent":
         return _consent(args)
+    if args.command == "serve":
+        return _serve(args)
     if args.command == "token" and args.action == "issue" and not args.user:
         parser.error("token issue requiere --user")
     if args.command == "token" and args.action == "revoke" and bool(args.user) == bool(args.prefix):

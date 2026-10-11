@@ -19,13 +19,15 @@ def client_config(**disclosure):
 
 
 def gateway_config(user_budget=100_000, global_budget=1_000_000, prices=(1_000_000, 5_000_000, 0, 1_000_000, 5_000_000),
-                   **disclosure):
+                   monthly_budget=None, **disclosure):
     base_in, base_out, threshold, long_in, long_out = prices
     return GatewayConfig.from_mapping(dict(disclosure=dict(DISCLOSURE, **disclosure),
                                            input_micro_usd_per_mtok=base_in, output_micro_usd_per_mtok=base_out,
                                            long_context_threshold_tokens=threshold,
                                            long_input_micro_usd_per_mtok=long_in, long_output_micro_usd_per_mtok=long_out,
-                                           per_user_daily_micro_usd=user_budget, global_daily_micro_usd=global_budget))
+                                           per_user_daily_micro_usd=user_budget, global_daily_micro_usd=global_budget,
+                                           global_monthly_micro_usd=global_budget * 31 if monthly_budget is None
+                                           else monthly_budget))
 
 
 # Claude Haiku 5.5 list prices, platform.claude.com/docs/en/about-claude/pricing, read 2026-10-11:

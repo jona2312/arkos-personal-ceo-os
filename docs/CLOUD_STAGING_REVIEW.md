@@ -57,11 +57,10 @@ Pendientes de baja gravedad (no corregidos, documentados):
 | Ledger: idempotencia, reservas, topes diarios con arrastre, conciliación, retención, tokens revocables | Implementado |
 | Lock de instancia única y versión de esquema | Implementado (Linux probado; Windows en CI) |
 | CLI de operador (tokens, conciliación) | Implementado |
-| Transporte PC→gateway | Simulado (`InProcessTransport`) |
-| Proveedor LLM | Simulado (`SimulatedProvider`) |
-| Servidor HTTPS alrededor de `dispatch()` (TLS, rate limit, logs sin contenido) | Pendiente |
-| Transporte HTTPS del PC (`TransportNotSent` vs pérdida, verificación TLS) | Pendiente |
-| `ProviderTransport` real (SDK, `max_retries=0`, `max_tokens`, sin herramientas ni caché, mapeo de errores) | Pendiente |
+| Transporte PC→gateway | Implementado (`HttpTransport`, ver `docs/CLOUD_GATEWAY_SERVER.md`) |
+| Proveedor LLM | Implementado con el SDK oficial; probado solo contra una API falsa local |
+| Servidor HTTPS alrededor de `dispatch()` (TLS, rate limit, logs sin contenido) | Implementado; TLS probado con certificado autofirmado |
+| Presupuesto mensual global aplicado por el gateway | Implementado |
 | Hosting con volumen local, backups del ledger, secreto del proveedor | Pendiente |
 | Pantalla de consentimiento y selector Cloud en la UI | Pendiente |
 | Habilitar `cloud` en `select_provider` | Pendiente (PR separado, después de staging) |

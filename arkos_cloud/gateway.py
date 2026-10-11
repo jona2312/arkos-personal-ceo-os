@@ -115,6 +115,8 @@ class CloudGateway:
     def close(self):
         try:
             self.ledger.close()
+            if callable(getattr(self.provider, "close", None)):
+                self.provider.close()
         finally:
             self._instance.release()
 
@@ -166,7 +168,8 @@ class CloudGateway:
         self.ledger.purge_content(retention_s)
         try:
             created, row = self.ledger.reserve(user, rid, digest, amount, utc_day(self.clock()),
-                                               self.config.per_user_daily_micro_usd, self.config.global_daily_micro_usd)
+                                               self.config.per_user_daily_micro_usd, self.config.global_daily_micro_usd,
+                                               self.config.global_monthly_micro_usd)
         except LedgerError as exc:
             status = {"conflict": 409, "busy": 409, "budget_exhausted": 429}[exc.code]
             code = "budget_exhausted" if exc.code == "budget_exhausted" else "duplicate_request"

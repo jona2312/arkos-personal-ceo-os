@@ -122,7 +122,8 @@ class ClientConfig:
 
 @dataclass(frozen=True)
 class GatewayConfig:
-    """Server side only. Prices in micro-USD per million tokens; budgets in micro-USD per UTC day.
+    """Server side only. Prices in micro-USD per million tokens; budgets in micro-USD per UTC
+    day, plus a global cap per UTC calendar month enforced by the gateway itself.
 
     Prices must be the ones actually billed, multipliers included (e.g. inference_geo).
     long_context_threshold_tokens > 0 applies the long_* prices to a whole request whose
@@ -136,12 +137,14 @@ class GatewayConfig:
     long_output_micro_usd_per_mtok: int
     per_user_daily_micro_usd: int
     global_daily_micro_usd: int
+    global_monthly_micro_usd: int
 
     @classmethod
     def from_mapping(cls, data):
         fields = ("disclosure", "input_micro_usd_per_mtok", "output_micro_usd_per_mtok",
                   "long_context_threshold_tokens", "long_input_micro_usd_per_mtok",
-                  "long_output_micro_usd_per_mtok", "per_user_daily_micro_usd", "global_daily_micro_usd")
+                  "long_output_micro_usd_per_mtok", "per_user_daily_micro_usd", "global_daily_micro_usd",
+                  "global_monthly_micro_usd")
         _strict(data, fields, "gateway")
         cfg = cls(disclosure=Disclosure.from_mapping(data["disclosure"]),
                   input_micro_usd_per_mtok=_int(data["input_micro_usd_per_mtok"], 1, 10**9, "precio entrada"),
@@ -150,9 +153,12 @@ class GatewayConfig:
                   long_input_micro_usd_per_mtok=_int(data["long_input_micro_usd_per_mtok"], 1, 10**9, "precio entrada largo"),
                   long_output_micro_usd_per_mtok=_int(data["long_output_micro_usd_per_mtok"], 1, 10**9, "precio salida largo"),
                   per_user_daily_micro_usd=_int(data["per_user_daily_micro_usd"], 0, 10**10, "presupuesto por usuario"),
-                  global_daily_micro_usd=_int(data["global_daily_micro_usd"], 0, 10**11, "presupuesto global"))
+                  global_daily_micro_usd=_int(data["global_daily_micro_usd"], 0, 10**11, "presupuesto global"),
+                  global_monthly_micro_usd=_int(data["global_monthly_micro_usd"], 0, 10**12, "presupuesto mensual"))
         if cfg.per_user_daily_micro_usd > cfg.global_daily_micro_usd:
             raise ConfigError("El presupuesto por usuario no puede superar el global")
+        if cfg.global_daily_micro_usd > cfg.global_monthly_micro_usd:
+            raise ConfigError("El presupuesto diario global no puede superar el mensual")
         if (cfg.long_input_micro_usd_per_mtok < cfg.input_micro_usd_per_mtok
                 or cfg.long_output_micro_usd_per_mtok < cfg.output_micro_usd_per_mtok):
             raise ConfigError("Los precios de contexto largo no pueden ser menores que los base")
