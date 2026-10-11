@@ -752,7 +752,11 @@ class StagingReadinessRegressionTests(CloudTestCase):
         too_long = rig.adapter.converse(request("cloud-req-0003", text=secret_text * 2000))
         rig.gateway.close()
         rig.gateway = CloudGateway(gateway_config(), rig.tmp / "gw" / "ledger.sqlite3", rig.provider)
-        blob = b"".join(p.read_bytes() for p in (rig.tmp / "gw").glob("ledger.sqlite3*"))
+        # Database, -wal and -shm while the gateway is running. The .lock file is held
+        # (and unreadable on Windows) by the live instance; it never holds data.
+        files = [p for p in (rig.tmp / "gw").glob("ledger.sqlite3*") if p.suffix != ".lock"]
+        self.assertTrue(files)
+        blob = b"".join(p.read_bytes() for p in files)
         self.assertNotIn(secret_text.encode(), blob)            # requests are stored as a digest only
         for token in (TOKEN_A, TOKEN_B):
             self.assertNotIn(token.encode(), blob)              # tokens as sha256 only
