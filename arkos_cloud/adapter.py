@@ -125,6 +125,20 @@ class CloudConversationProvider:
                 pass
         threading.Thread(target=run, daemon=True).start()
 
+    def gateway_status(self, timeout_s=5):
+        """Gateway disclosure digest and provider mode ('test'|'real'). None if unreachable or invalid."""
+        try:
+            status, raw = self.transport.request("GET", "/v1/status", self._headers(), b"", timeout_s)
+            if status != 200 or not isinstance(raw, (bytes, bytearray)) or len(raw) > MAX_RESPONSE_BYTES:
+                return None
+            data = json.loads(bytes(raw).decode("utf-8"))
+        except Exception:  # noqa: BLE001 - unreachable gateway is a normal state for the screen
+            return None
+        if (not isinstance(data, dict) or not isinstance(data.get("disclosure_digest"), str)
+                or data.get("provider_mode") not in ("test", "real")):
+            return None
+        return {"disclosure_digest": data["disclosure_digest"], "provider_mode": data["provider_mode"]}
+
     def lookup(self, request_id):
         """Explicit human 'check status' action: reads billing state; never triggers a call."""
         if not isinstance(request_id, str) or not _RID.match(request_id):

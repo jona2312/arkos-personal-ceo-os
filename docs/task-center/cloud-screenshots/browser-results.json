@@ -1,0 +1,22 @@
+{
+  "status": "PASS",
+  "provider": "fake Messages API on loopback via official SDK",
+  "steps": [
+    "local by default, Cloud not selected",
+    "explicit consent with provider, model, data, retention and limits",
+    "conversation, Cloud-only history, proposal -> pending task",
+    "cancel explains possible charge; cost recorded",
+    "cut after sending: uncertain, check status, no automatic retry",
+    "gateway down: not sent, text kept",
+    "budget exhausted: not sent",
+    "mode switch keeps histories apart; revoke",
+    "mobile consent and conversation, no horizontal overflow"
+  ],
+  "providerRequests": 5,
+  "mobileGeometry": {
+    "width": 390,
+    "scroll": 390
+  },
+  "errors": [],
+  "autoExecutionRequests": 0
+}

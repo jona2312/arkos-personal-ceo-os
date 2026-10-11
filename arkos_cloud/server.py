@@ -28,6 +28,8 @@ _ROUTE = re.compile(r"^/v1/conversations(/[^/]+)?(/cancel)?$")
 
 
 def _route_template(path):
+    if path.split("?", 1)[0] == "/v1/status":
+        return "/v1/status"
     match = _ROUTE.match(path.split("?", 1)[0])
     if not match:
         return "/<otro>"

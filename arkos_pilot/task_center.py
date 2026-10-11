@@ -1,6 +1,7 @@
 """Loopback-only task center. No cloud, remote shell or Hermes credentials."""
 import argparse
 from contextlib import contextmanager
+import os
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import json
 from pathlib import Path
@@ -39,11 +40,20 @@ def queue_at(root):
 class TaskCenter(ThreadingHTTPServer):
     daemon_threads = True
 
-    def __init__(self, state_dir, port=0, relay_snapshot=None, relay_device_id=None, bridge=None, chat_mode='hermes'):
+    def __init__(self, state_dir, port=0, relay_snapshot=None, relay_device_id=None, bridge=None, chat_mode='hermes',
+                 cloud=None):
         if (relay_snapshot is None) != (relay_device_id is None) or (relay_device_id is not None and not DEVICE.fullmatch(relay_device_id)):
             raise ValueError("Configurá juntos el snapshot y el ID de dispositivo válido.")
-        # Reject unavailable providers before opening a socket or creating state.
+        # Reject unavailable providers before opening a socket or creating state. The local
+        # chat is never Cloud: Cloud is a separate, optional session (cloud=...).
+        if chat_mode == 'cloud':
+            raise ValueError('El chat local no puede ser Cloud.')
         select_provider(bridge, chat_mode)
+        if cloud is not None:
+            from .cloud_link import CloudLink
+            if not isinstance(cloud, CloudLink):
+                raise ValueError('Cloud solo se configura con una sesión CloudLink.')
+        self.cloud = cloud  # None: Cloud disabled (default)
         self.relay_snapshot = relay_snapshot
         self.relay_device_id = relay_device_id
         self.root = Path(state_dir).resolve()
@@ -58,6 +68,8 @@ class TaskCenter(ThreadingHTTPServer):
     def server_close(self):
         if hasattr(self, 'chat'):
             self.chat.close()
+        if getattr(self, 'cloud', None) is not None:
+            self.cloud.close()
         super().server_close()
 
     def launch(self, task_id):
@@ -165,6 +177,18 @@ class Handler(BaseHTTPRequestHandler):
             return
         static = {'/': ('index.html', 'text/html; charset=utf-8'), '/app.js': ('app.js', 'text/javascript; charset=utf-8'), '/neural.js': ('neural.js', 'text/javascript; charset=utf-8'), '/remote-view.js': ('remote-view.js', 'text/javascript; charset=utf-8'), '/style.css': ('style.css', 'text/css; charset=utf-8'), '/mark.svg': ('mark.svg', 'image/svg+xml')}
         try:
+            if path == '/api/cloud':
+                cloud = self.server.cloud
+                self.json(200, cloud.status() if cloud else {'configured': False, 'processing': 'cloud',
+                                                             'reason': 'Cloud no está configurado en esta PC.'})
+                return
+            if path.startswith('/api/cloud/chat/'):
+                parts = path.strip('/').split('/')
+                if len(parts) not in (4, 5) or not REQUEST_ID.fullmatch(parts[3]) or (len(parts) == 5 and parts[4] != 'check'):
+                    raise ValueError('Turno inválido.')
+                cloud = self.cloud_session()
+                self.json(200, cloud.check(parts[3]) if len(parts) == 5 else cloud.chat.get(parts[3]))
+                return
             if path == '/api/chat':
                 self.json(200, self.server.chat.status())
                 return
@@ -186,7 +210,7 @@ class Handler(BaseHTTPRequestHandler):
                 self.wfile.write(data)
                 return
             if path == '/api/status':
-                self.json(200, {'mode': 'local', 'worker_busy': self.server.worker_lock.locked(), 'ffmpeg': bool(shutil.which('ffmpeg')), 'capabilities': {'notes': True, 'clips': bool(shutil.which('ffmpeg')), 'hermes_chat': self.server.chat.bridge is not None, 'remote_sync': False, 'email': False, 'calendar': False, 'whatsapp': False}})
+                self.json(200, {'mode': 'local', 'worker_busy': self.server.worker_lock.locked(), 'ffmpeg': bool(shutil.which('ffmpeg')), 'capabilities': {'notes': True, 'clips': bool(shutil.which('ffmpeg')), 'hermes_chat': self.server.chat.bridge is not None, 'cloud_chat': self.server.cloud is not None, 'remote_sync': False, 'email': False, 'calendar': False, 'whatsapp': False}})
             elif path == '/api/remote-view':
                 self.json(200, read_view(self.server.relay_snapshot, self.server.relay_device_id))
             elif path == '/api/tasks':
@@ -223,6 +247,11 @@ class Handler(BaseHTTPRequestHandler):
         except (ValueError, OSError, sqlite3.Error):
             self.json(400, {'error': 'No se pudo consultar el recurso. Revisá el estado de la tarea y su archivo.'})
 
+    def cloud_session(self):
+        if self.server.cloud is None:
+            raise ChatError('Cloud no está configurado en esta PC.', 404)
+        return self.server.cloud
+
     def do_POST(self):
         if not self.allowed(private=True, mutation=True):
             return
@@ -231,7 +260,7 @@ class Handler(BaseHTTPRequestHandler):
                 raise ValueError('Se requiere JSON.')
             length = int(self.headers.get('Content-Length', '0'))
             path = urlsplit(self.path).path
-            limit = 200_000 if path.startswith('/api/chat') else MAX_BODY
+            limit = 200_000 if path.startswith(('/api/chat', '/api/cloud')) else MAX_BODY
             if self.headers.get('Transfer-Encoding') or not 0 < length <= limit:
                 raise ValueError('Pedido vacío o demasiado grande.')
             raw = self.rfile.read(length)
@@ -240,18 +269,31 @@ class Handler(BaseHTTPRequestHandler):
             if not isinstance(data, dict):
                 raise ValueError('Pedido inválido.')
             path = urlsplit(self.path).path
-            if path == '/api/chat':
-                self.json(202, self.server.chat.start(data))
+            if path == '/api/cloud/consent':
+                if set(data) != {'code'} or not isinstance(data['code'], str):
+                    raise ValueError('Consentimiento inválido.')
+                self.json(200, self.cloud_session().accept(data['code']))
                 return
-            if path.startswith('/api/chat/'):
-                parts = path.strip('/').split('/')
-                if len(parts) != 4 or not REQUEST_ID.fullmatch(parts[2]):
+            if path == '/api/cloud/revoke':
+                if data:
+                    raise ValueError('Pedido inválido.')
+                self.json(200, self.cloud_session().revoke())
+                return
+            for prefix, chat in (('/api/chat', None), ('/api/cloud/chat', 'cloud')):
+                if path != prefix and not path.startswith(prefix + '/'):
+                    continue
+                chat = self.server.chat if chat is None else self.cloud_session().chat
+                if path == prefix:
+                    self.json(202, chat.start(data))
+                    return
+                parts = path[len(prefix) + 1:].split('/')
+                if len(parts) != 2 or not REQUEST_ID.fullmatch(parts[0]):
                     raise ValueError('Ruta de conversación inválida.')
-                rid, action = parts[2:]
+                rid, action = parts
                 if action == 'cancel' and not data:
-                    self.json(200, self.server.chat.cancel(rid))
+                    self.json(200, chat.cancel(rid))
                 elif action == 'note' and set(data) == {'proposal_id'} and isinstance(data['proposal_id'], str):
-                    self.json(200, {'task': self.server.chat.create_note(rid, data['proposal_id'])})
+                    self.json(200, {'task': chat.create_note(rid, data['proposal_id'])})
                 else:
                     raise ValueError('Acción de conversación inválida.')
                 return
@@ -318,6 +360,9 @@ def main(argv=None):
     parser.add_argument('--hermes-source', type=Path)
     parser.add_argument('--hermes-home', type=Path, help='Perfil dedicado ya autorizado y existente')
     parser.add_argument('--hermes-model', default='')
+    parser.add_argument('--cloud-config', type=Path, help='Opcional: configuración Cloud del cliente (sin claves). '
+                        'El token del dispositivo se lee de ARKOS_CLOUD_DEVICE_TOKEN.')
+    parser.add_argument('--cloud-ca-file', type=Path, help='CA explícita para el gateway Cloud (opcional)')
     args = parser.parse_args(argv)
     try:
         bridge = None
@@ -329,8 +374,19 @@ def main(argv=None):
             bridge = HermesBridge(*settings, model=args.hermes_model)
         elif args.hermes_model:
             raise ValueError('Configurá Hermes antes de elegir su modelo.')
-        server = TaskCenter(args.state_dir, args.port, args.relay_snapshot, args.relay_device_id, bridge=bridge)
-    except ValueError as exc:
+        cloud = None
+        if args.cloud_config:
+            token = os.environ.get('ARKOS_CLOUD_DEVICE_TOKEN', '')
+            if not token:
+                raise ValueError('Cloud requiere ARKOS_CLOUD_DEVICE_TOKEN (token del dispositivo, no una clave del proveedor).')
+            from .cloud_link import CloudLink
+            cloud = CloudLink.from_file(args.state_dir, args.cloud_config, token,
+                                        str(args.cloud_ca_file) if args.cloud_ca_file else None)
+        elif args.cloud_ca_file:
+            raise ValueError('Configurá Cloud antes de indicar su CA.')
+        server = TaskCenter(args.state_dir, args.port, args.relay_snapshot, args.relay_device_id, bridge=bridge,
+                            cloud=cloud)
+    except (ValueError, OSError) as exc:
         parser.error(str(exc))
     url = f'{server.origin}/#key={server.key}'
     print('ARKOS local. Enlace privado de esta sesión (no compartir):', flush=True)

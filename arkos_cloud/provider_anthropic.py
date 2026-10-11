@@ -46,6 +46,8 @@ class AnthropicProvider:
                 raise RuntimeError("Instalá requirements-cloud.txt en el servidor del gateway") from exc
         self._sdk = sdk
         self.model, self.effort = model, effort
+        # A loopback base_url can only reach a local fake: the gateway reports it as a test.
+        self.mode = "test" if base_url is not None else "real"
         self._client = sdk.Anthropic(api_key=api_key, base_url=base_url, max_retries=0)
 
     def close(self):

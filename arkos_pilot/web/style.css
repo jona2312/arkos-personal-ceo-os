@@ -314,3 +314,24 @@ button{min-height:44px;min-width:44px}button.primary{white-space:normal}
   .chat-state{margin:0 0 10px}
   :root[data-view=conversation] .core-body{display:block}
 }
+/* Local / Cloud: where the conversation is processed is always visible. */
+.processing-bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:10px 0 4px}
+.mode-tabs{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;flex:none}
+.mode-tabs button{background:transparent;border:0;padding:5px 14px;min-height:36px;font-size:13px;color:var(--text)}
+.mode-tabs button+button{border-left:1px solid var(--line)}
+.mode-tabs button[aria-checked=true]{background:var(--accent-wash);font-weight:650}
+.processing-where{margin:0;font-size:12px;line-height:1.45;color:var(--text);flex:1;min-width:150px;overflow-wrap:anywhere}
+html[data-processing=cloud] .processing-where{border-left:3px solid var(--pink);padding-left:8px}
+.cloud-consent{border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin:10px 0 4px;background:var(--surface);color:var(--text)}
+.cloud-consent h4{margin:0 0 2px;font-size:15px}
+.cloud-terms{display:grid;grid-template-columns:minmax(120px,max-content) 1fr;gap:6px 14px;margin:10px 0;font-size:13px;line-height:1.5}
+.cloud-terms dt{color:var(--muted)}
+.cloud-terms dd{margin:0;overflow-wrap:anywhere}
+.cloud-terms .unverified{color:var(--pink);font-weight:650}
+.cloud-agree{display:flex;gap:8px;align-items:flex-start;font-size:13px;line-height:1.5;margin:8px 0}
+.cloud-agree input{width:20px;height:20px;flex:none;margin:1px 0 0}
+.cloud-cancel-note{color:var(--pink);margin:6px 0 0}
+.cloud-footer{margin-top:6px}
+.chat-outcome .secondary{display:block;margin-top:8px;min-height:40px}
+.chat-outcome .outcome-detail{display:block;margin-top:6px;color:var(--text)}
+@media (max-width:560px){.cloud-terms{grid-template-columns:1fr;gap:2px}.cloud-terms dd{margin-bottom:8px}.processing-where{flex-basis:100%}}
