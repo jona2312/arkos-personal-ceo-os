@@ -31,6 +31,10 @@ ERROR_CODES = (
     "runner_failed",          # runner process crashed or could not start
     "timeout",
     "cancelled",
+    # Cloud adapter (arkos_cloud). Hermes' runner never emits these.
+    "consent_required",       # no valid consent for the current disclosure: nothing was sent
+    "budget_exhausted",       # the reservation was refused: no provider call
+    "outcome_uncertain",      # request may have reached the provider; never retried automatically
 )
 _ID = re.compile(r"^[A-Za-z0-9_.:-]{8,64}$")
 # The model is asked to append at most a few blocks like:
