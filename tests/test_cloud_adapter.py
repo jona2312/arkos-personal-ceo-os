@@ -1,6 +1,7 @@
 """Cloud adapter + gateway with a simulated transport and provider. No network, keys or paid calls."""
 import json
 import os
+import re
 import sqlite3
 import subprocess
 import sys
@@ -101,10 +102,30 @@ class ConfigTests(CloudTestCase):
         self.assertNotIn(TOKEN_A, repr(rig.adapter))
 
     def test_cloud_package_reads_no_environment_or_network(self):
+        """Network, environment and SDK use are confined to the modules whose job they are."""
+        network = ("urllib.request", "http.client", "http.server", "import socket", "import requests")
+        allowed = {
+            "http_transport.py": {"http.client"},            # PC -> gateway, verified TLS
+            "server.py": {"http.server"},                    # gateway front
+            "provider_anthropic.py": {"anthropic"},          # gateway -> provider (server only)
+            "__main__.py": {"os.environ"},                   # serve: provider key, server side
+        }
         for path in (ROOT / "arkos_cloud").glob("*.py"):
             source = path.read_text(encoding="utf-8")
-            for forbidden in ("os.environ", "getenv", "urllib.request", "http.client", "socket", "requests", "anthropic"):
+            for forbidden in ("os.environ", "getenv", "anthropic", *network):
+                if forbidden in allowed.get(path.name, set()):
+                    continue
+                if forbidden == "anthropic" and path.name in ("__main__.py", "gateway.py", "server.py"):
+                    # names only: these import provider_anthropic lazily or mention it in docs
+                    self.assertNotIn("import anthropic", source, path.name)
+                    continue
                 self.assertNotIn(forbidden, source, f"{path.name} contiene {forbidden}")
+        main = (ROOT / "arkos_cloud" / "__main__.py").read_text(encoding="utf-8")
+        self.assertLessEqual(set(re.findall(r"os\.environ\.get\((\w+)", main)), {"KEY_ENV", "TEST_BASE_URL_ENV"})
+        self.assertNotIn("os.environ[", main)
+        for client_side in ("adapter.py", "config.py", "consent.py", "http_transport.py"):
+            source = (ROOT / "arkos_cloud" / client_side).read_text(encoding="utf-8")
+            self.assertNotIn("PROVIDER_KEY", source, client_side)
 
 
 class ConsentTests(CloudTestCase):
@@ -786,6 +807,50 @@ class StagingReadinessRegressionTests(CloudTestCase):
             source = path.read_text(encoding="utf-8")
             for forbidden in ("from arkos_pilot", "import arkos_pilot", "approve(", "run_next", "subprocess", "tools=", '"tools"', "tool_choice"):
                 self.assertNotIn(forbidden, source, f"{path.name}: {forbidden}")
+
+
+class MonthlyBudgetTests(CloudTestCase):
+    def test_monthly_cap_blocks_and_counts_open_reservations_from_earlier_months(self):
+        rig = self.rig()
+        ledger = rig.gateway.ledger
+        ledger.reserve("u1", "rid-m-0001", "d", 600, "2026-10-01", 10**6, 10**6, 1000)
+        ledger.reserve("u2", "rid-m-0002", "d", 300, "2026-10-15", 10**6, 10**6, 1000)
+        with self.assertRaises(LedgerError) as caught:
+            ledger.reserve("u3", "rid-m-0003", "d", 200, "2026-10-31", 10**6, 10**6, 1000)
+        self.assertEqual(caught.exception.code, "budget_exhausted")
+        # A new month starts fresh except for what is still open (in flight or uncertain).
+        ledger.mark_sent("u1", "rid-m-0001")
+        ledger.settle("u1", "rid-m-0001", "uncertain")
+        ledger.mark_sent("u2", "rid-m-0002")
+        ledger.settle("u2", "rid-m-0002", "completed", charged=100)
+        with self.assertRaises(LedgerError):
+            ledger.reserve("u3", "rid-m-0004", "d", 500, "2026-11-01", 10**6, 10**6, 1000)
+        ledger.reserve("u3", "rid-m-0005", "d", 400, "2026-11-01", 10**6, 10**6, 1000)
+        self.assertEqual(ledger.month_spend("2026-11-01"), dict(reserved=400, charged=0))
+        self.assertEqual(ledger.month_spend("2026-10-31"), dict(reserved=600, charged=100))
+
+    def test_gateway_applies_its_own_monthly_cap(self):
+        probe = self.rig()
+        cost = probe.gateway.reservation(c.validate_request(request()))
+        rig = self.rig(gateway=gateway_config(user_budget=cost * 2, global_budget=cost * 2, monthly_budget=cost * 3))
+        rig.gateway.clock = lambda: 1_792_500_000.0  # 2026-10-20 UTC
+        self.assertEqual(utc_day(rig.gateway.clock()), "2026-10-20")
+        rig.gateway.ledger.reserve("other", "seed-0001", "d", cost * 2 + 1, "2026-10-02", 10**9, 10**9)
+        # Today's caps would allow it; this month's global spend would not.
+        self.assertEqual(rig.adapter.converse(request("cloud-req-0001"))["error"]["code"], "budget_exhausted")
+        self.assertEqual(rig.provider.calls, [])
+
+    def test_monthly_config_is_required_and_consistent(self):
+        with self.assertRaises(ConfigError):
+            gateway_config(global_budget=1000, monthly_budget=999)
+        data = json.loads((ROOT / "config" / "cloud-gateway.example.json").read_text(encoding="utf-8"))
+        cfg = GatewayConfig.from_mapping(data)
+        self.assertEqual((cfg.per_user_daily_micro_usd, cfg.global_daily_micro_usd, cfg.global_monthly_micro_usd),
+                         (200_000, 1_000_000, 10_000_000))
+        self.assertEqual((cfg.disclosure.model, cfg.disclosure.gateway_retention_hours), ("claude-haiku-5-5", 0))
+        del data["global_monthly_micro_usd"]
+        with self.assertRaises(ConfigError):
+            GatewayConfig.from_mapping(data)
 
 
 if __name__ == "__main__":

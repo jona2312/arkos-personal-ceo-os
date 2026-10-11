@@ -166,6 +166,22 @@ class Ledger:
             (day, *OPEN) + (() if user is None else (user,))).fetchone()[0]
         return (row[0] if row else 0) + carried
 
+    def _month_exposure(self, day):
+        """Global reserved+charged this UTC month plus open reservations from earlier months."""
+        month_start = day[:8] + "01"
+        this_month = self.db.execute("SELECT COALESCE(SUM(reserved+charged),0) FROM spend "
+                                     "WHERE scope='global' AND day>=? AND day<=?", (month_start, day)).fetchone()[0]
+        carried = self.db.execute("SELECT COALESCE(SUM(reserved),0) FROM calls WHERE day<? AND state IN (?,?,?)",
+                                  (month_start, *OPEN)).fetchone()[0]
+        return this_month + carried
+
+    @_serialized
+    def month_spend(self, day):
+        month_start = day[:8] + "01"
+        row = self.db.execute("SELECT COALESCE(SUM(reserved),0), COALESCE(SUM(charged),0) FROM spend "
+                              "WHERE scope='global' AND day>=? AND day<=?", (month_start, day)).fetchone()
+        return dict(reserved=row[0], charged=row[1])
+
     @_serialized
     def spend(self, scope, day):
         row = self.db.execute("SELECT reserved, charged FROM spend WHERE scope=? AND day=?", (scope, day)).fetchone()
@@ -179,8 +195,10 @@ class Ledger:
 
     # --- lifecycle ----------------------------------------------------------------------
     @_serialized
-    def reserve(self, user, rid, digest, amount, day, user_limit, global_limit):
-        """Returns (created, row). Raises LedgerError for conflict, busy or budget."""
+    def reserve(self, user, rid, digest, amount, day, user_limit, global_limit, monthly_limit=None):
+        """Returns (created, row). Raises LedgerError for conflict, busy or budget.
+
+        day is 'YYYY-MM-DD' (UTC). monthly_limit caps the global spend of that calendar month."""
         with self._transaction():
             row = self._row(user, rid)
             if row:
@@ -192,7 +210,8 @@ class Ledger:
                                    (user, *IN_FLIGHT)).fetchone():
                     raise LedgerError("busy", "Ya hay un pedido Cloud en curso para este usuario")
                 if (self._exposure(user, day) + amount > user_limit
-                        or self._exposure(None, day) + amount > global_limit):
+                        or self._exposure(None, day) + amount > global_limit
+                        or (monthly_limit is not None and self._month_exposure(day) + amount > monthly_limit)):
                     raise LedgerError("budget_exhausted", "Presupuesto insuficiente para este pedido")
                 now = time.time()
                 self.db.execute("INSERT INTO calls (user_id, request_id, digest, state, day, reserved, created, updated) "
