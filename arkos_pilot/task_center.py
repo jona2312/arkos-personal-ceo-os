@@ -9,6 +9,7 @@ import secrets
 import shutil
 import sqlite3
 import threading
+import time
 from urllib.parse import urlsplit
 import webbrowser
 
@@ -21,6 +22,9 @@ from .chat import Conversations, ChatError, REQUEST_ID
 WEB = Path(__file__).with_name('web')
 TASK_ID = re.compile(r'^[0-9a-f]{32}$')
 MAX_BODY = 650_000
+# Unread bodies of rejected requests: drained only up to this size and time, else closed.
+DRAIN_LIMIT = 64 * 1024
+DRAIN_SECONDS = 1.0
 
 
 @contextmanager
@@ -101,6 +105,38 @@ class Handler(BaseHTTPRequestHandler):
         self.send_header('Content-Length', str(len(data)))
         self.end_headers()
         self.wfile.write(data)
+        if status >= 400:
+            self.discard_unread_body()
+
+    def discard_unread_body(self):
+        """After answering a rejected POST, read and drop the body it still carries.
+
+        Closing a socket with unread bytes makes the TCP stack reset the connection, and a
+        Windows client can then lose the response before reading it (WinError 10053).
+        Only small, framed bodies are drained, with a deadline; chunked, oversized or
+        malformed ones are not read and the connection simply closes. Authentication is
+        unchanged: the bytes are discarded, never parsed.
+        """
+        if self.command != 'POST' or getattr(self, 'body_consumed', False):
+            return
+        self.body_consumed = True
+        self.close_connection = True
+        length = self.headers.get('Content-Length', '').strip()
+        if self.headers.get('Transfer-Encoding') or not length.isdigit() or int(length) > DRAIN_LIMIT:
+            return
+        remaining, deadline = int(length), time.monotonic() + DRAIN_SECONDS
+        try:
+            while remaining > 0:
+                left = deadline - time.monotonic()
+                if left <= 0:
+                    return
+                self.connection.settimeout(left)
+                chunk = self.rfile.read1(min(remaining, 16384))
+                if not chunk:
+                    return
+                remaining -= len(chunk)
+        except OSError:
+            return
 
     def allowed(self, private=False, mutation=False):
         # Exact Host blocks DNS rebinding; token prevents other loopback origins
@@ -198,7 +234,9 @@ class Handler(BaseHTTPRequestHandler):
             limit = 200_000 if path.startswith('/api/chat') else MAX_BODY
             if self.headers.get('Transfer-Encoding') or not 0 < length <= limit:
                 raise ValueError('Pedido vacío o demasiado grande.')
-            data = json.loads(self.rfile.read(length))
+            raw = self.rfile.read(length)
+            self.body_consumed = True
+            data = json.loads(raw)
             if not isinstance(data, dict):
                 raise ValueError('Pedido inválido.')
             path = urlsplit(self.path).path
