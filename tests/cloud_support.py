@@ -18,20 +18,29 @@ def client_config(**disclosure):
                                           disclosure=dict(DISCLOSURE, **disclosure)))
 
 
-def gateway_config(user_budget=100_000, global_budget=1_000_000, **disclosure):
+def gateway_config(user_budget=100_000, global_budget=1_000_000, prices=(1_000_000, 5_000_000, 0, 1_000_000, 5_000_000),
+                   **disclosure):
+    base_in, base_out, threshold, long_in, long_out = prices
     return GatewayConfig.from_mapping(dict(disclosure=dict(DISCLOSURE, **disclosure),
-                                           input_micro_usd_per_mtok=1_000_000, output_micro_usd_per_mtok=5_000_000,
+                                           input_micro_usd_per_mtok=base_in, output_micro_usd_per_mtok=base_out,
+                                           long_context_threshold_tokens=threshold,
+                                           long_input_micro_usd_per_mtok=long_in, long_output_micro_usd_per_mtok=long_out,
                                            per_user_daily_micro_usd=user_budget, global_daily_micro_usd=global_budget))
+
+
+# Claude Haiku 5.5 list prices, platform.claude.com/docs/en/about-claude/pricing, read 2026-10-11:
+# USD 0.10 / 0.50 per MTok up to 100,000 prompt tokens; USD 0.50 / 2.50 above (whole request).
+HAIKU_5_5 = (100_000, 500_000, 100_000, 500_000, 2_500_000)
 
 
 TOKENS = {token_hash(TOKEN_A): "user-a", token_hash(TOKEN_B): "user-b"}
 
 
 class SimulatedProvider:
-    """behaviour: ok | lost | not_sent | rejected | slow | no_usage | huge, or a callable."""
+    """behaviour: ok | lost | not_sent | rejected | no_usage | huge, or a callable."""
 
-    def __init__(self, behaviour="ok", text="Hola, soy una respuesta sintética.", hold=None):
-        self.behaviour, self.text = behaviour, text
+    def __init__(self, behaviour="ok", text="Hola, soy una respuesta sintética.", hold=None, usage=(120, 40)):
+        self.behaviour, self.text, self.usage = behaviour, text, usage
         self.calls = []
         self.hold = hold            # threading.Event the provider waits on before answering
         self.entered = threading.Event()
@@ -59,7 +68,7 @@ class SimulatedProvider:
             return ProviderResult(self.text, None, None)
         if b == "huge":
             return ProviderResult("x" * (max_output_tokens * 16 + 1), 100, max_output_tokens)
-        return ProviderResult(self.text, 120, 40)
+        return ProviderResult(self.text, *self.usage)
 
 
 class InProcessTransport:

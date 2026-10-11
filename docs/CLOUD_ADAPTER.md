@@ -20,15 +20,16 @@ Conversations ──converse()──▶ CloudConversationProvider ──transpor
 | `arkos_cloud/consent.py` | Consentimiento local ligado al digest exacto de la divulgación (proveedor, modelo, región, retenciones, límites, texto de datos enviados). Cambiar cualquiera lo invalida. Aceptar exige escribir el código mostrado. |
 | `arkos_cloud/adapter.py` | Implementa `ConversationProvider` (mismo contrato v1). Un `converse()` = como máximo una solicitud al gateway. |
 | `arkos_cloud/gateway.py` | Autenticación, consentimiento, límites, idempotencia, reserva de presupuesto y una sola llamada al proveedor. Expone `dispatch()` con forma HTTP para un servidor futuro. |
-| `arkos_cloud/ledger.py` | SQLite: estado por `(usuario, request_id)` y gasto reservado/cobrado por usuario y global por día UTC. |
+| `arkos_cloud/ledger.py` | SQLite: tokens (solo hash, revocables), estado por `(usuario, request_id)`, gasto reservado/cobrado por usuario y global por día UTC, con arrastre de reservas abiertas. |
 | `python -m arkos_cloud consent` | Muestra la divulgación, registra o revoca el consentimiento. No envía datos. |
+| `python -m arkos_cloud token / reconcile` | Operador: emitir, listar y revocar tokens; conciliar inciertos. Funciona con el gateway en marcha. |
 
 Reutiliza `arkos_hermes.contract` (validación, límites, `SYSTEM_PROMPT`, `parse_reply`,
 digest de propuestas) y `arkos_pilot.chat.Conversations` + `Queue.add` para notas. No hay
 otra cola, otro chat ni otra aprobación. El contrato solo suma tres códigos de error:
 `consent_required`, `budget_exhausted`, `outcome_uncertain`.
 
-## Garantías y dónde se prueban (`tests/test_cloud_adapter.py`, 37 pruebas)
+## Garantías y dónde se prueban (`tests/test_cloud_adapter.py`, 53 pruebas)
 
 | Requisito | Comportamiento | Prueba |
 |---|---|---|
@@ -42,7 +43,13 @@ otra cola, otro chat ni otra aprobación. El contrato solo suma tres códigos de
 | Idempotencia | Mismo `request_id` + mismo contenido → misma respuesta, 1 llamada; otro contenido → conflicto; 12 concurrentes → 1 llamada | `IdempotencyTests` |
 | Respuesta perdida | `outcome_uncertain`; la reserva queda retenida; reintentar el mismo id nunca vuelve a llamar; conciliación manual | `LostResponseTests` |
 | Cancelación | Corta la espera en <1 s, avisa al gateway, el contenido tardío se descarta; el costo real se registra | `CancelTests`, `test_chat_cancel_reaches_the_gateway` |
-| Reinicio del gateway | `reserved` → liberado (nunca salió); `sent` → incierto (nunca se reenvía) | `test_gateway_restart_recovers_without_resending` |
+| Reinicio del gateway | `reserved` → liberado (nunca salió); `sent` → incierto (nunca se reenvía); tokens, gasto e idempotencia persisten | `test_gateway_restart_recovers_without_resending`, `test_restart_keeps_*` |
+| Instancia única | Lock del SO en `<ledger>.lock` y versión de esquema; una segunda instancia no arranca | `test_second_gateway_instance_*`, `test_incompatible_schema_is_refused` |
+| Revocación | Token revocado → 401 en el pedido siguiente, sin reinicio | `test_revoked_token_*`, `test_operator_cli_*` |
+| Cambio de día | Reservas abiertas de días previos cuentan hasta conciliarse | `test_day_change_*`, `test_call_in_flight_across_midnight_*` |
+| Tramos de precio | Reserva y cobro con el tramo de contexto largo cuando corresponde | `test_reservation_covers_haiku_long_context_tier` |
+| Retención | Purga en cada pedido; 0 h = no guarda contenido | `test_retention_zero_*` |
+| Concurrencia entre conexiones | Hilos con conexiones independientes + procesos: el tope se respeta exacto | `test_budget_holds_across_independent_connections_and_processes` |
 | No aprueba ni ejecuta | La propuesta crea una tarea `awaiting_approval` solo por acción humana del chat existente | `test_reuses_chat_and_queue_and_never_approves` |
 | Cloud sigue cerrado | `select_provider('cloud')` y `TaskCenter(chat_mode='cloud')` fallan antes del socket; UI sin referencias | `test_cloud_mode_stays_disabled` |
 
@@ -50,8 +57,8 @@ otra cola, otro chat ni otra aprobación. El contrato solo suma tres códigos de
 
 `reserved → sent → completed | failed (sin cobro) | cancelled | uncertain → reconciled`
 
-- **uncertain**: pudo haberse cobrado. Retiene la reserva hasta `Ledger.reconcile()` con el
-  consumo informado por el proveedor. El usuario ve "resultado incierto, no se reintenta".
+- **uncertain**: pudo haberse cobrado. Retiene la reserva, también en los días siguientes, hasta
+  `Ledger.reconcile()` (o `python -m arkos_cloud reconcile`) con el consumo informado por el proveedor. El usuario ve "resultado incierto, no se reintenta".
 - Un reintento humano debe usar un `request_id` nuevo. El gateway es la autoridad: aunque el
   PC se reinicie y reenvíe el mismo id, no habrá segunda llamada.
 - Si el proveedor informa un consumo mayor que la reserva, se cobra el real (puede exceder el
@@ -60,7 +67,7 @@ otra cola, otro chat ni otra aprobación. El contrato solo suma tres códigos de
 ## Límites conocidos
 
 - Sin transporte HTTP real ni servidor: `dispatch()` está listo para envolverse.
-- SQLite = una sola instancia del gateway. Escalar requiere Postgres con las mismas transacciones.
+- SQLite = una sola instancia del gateway en disco local (lo impone `InstanceLock`). Escalar requiere Postgres con las mismas transacciones.
 - El historial lo arma el cliente (igual que en local). Al pasar de Local a Cloud, el
   historial previo no debería enviarse salvo selección explícita; eso pertenece a la UI pendiente.
 - `processing` en el estado del chat sigue en `synthetic` para estas pruebas; `cloud` llegará

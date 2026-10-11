@@ -1,5 +1,9 @@
 """Cloud adapter + gateway with a simulated transport and provider. No network, keys or paid calls."""
 import json
+import os
+import sqlite3
+import subprocess
+import sys
 import tempfile
 import threading
 import time
@@ -12,13 +16,14 @@ from arkos_cloud.adapter import CloudConversationProvider
 from arkos_cloud.config import ClientConfig, ConfigError, GatewayConfig
 from arkos_cloud.consent import CONFIRM_CHARS, ConsentStore
 from arkos_cloud.gateway import CloudGateway, utc_day
+from arkos_cloud.ledger import SCHEMA_VERSION, Ledger, LedgerError, token_hash
 from arkos_cloud.__main__ import main as cloud_cli
 from arkos_pilot.chat import Conversations
 from arkos_pilot.core import Queue
 from arkos_pilot.providers import select_provider
 from arkos_pilot.task_center import TaskCenter
-from tests.cloud_support import (DISCLOSURE, TOKEN_A, TOKEN_B, TOKENS, InProcessTransport, SimulatedProvider,
-                                 client_config, gateway_config)
+from tests.cloud_support import (DISCLOSURE, HAIKU_5_5, TOKEN_A, TOKEN_B, TOKENS, InProcessTransport,
+                                 SimulatedProvider, client_config, gateway_config)
 
 ROOT = Path(__file__).resolve().parents[1]
 PROPOSAL_TEXT = ('Te propongo una nota.\n```arkos-proposal\n'
@@ -317,10 +322,14 @@ class IdempotencyTests(CloudTestCase):
         rig.adapter.converse(request())
         other = CloudConversationProvider(rig.config, rig.consent, rig.transport, TOKEN_B)
         self.assertIsNone(other.lookup("cloud-req-0001"))
-        headers = {"Authorization": "Bearer " + TOKEN_B}
-        self.assertEqual(rig.gateway.dispatch("POST", "/v1/conversations/cloud-req-0001/cancel", headers, b"")[0], 404)
         self.assertEqual(other.converse(request())["status"], "ok")  # B's own request, own ledger row
         self.assertEqual(len(rig.provider.calls), 2)
+        rig.adapter.converse(request("cloud-req-a-only"))
+        headers = {"Authorization": "Bearer " + TOKEN_B}
+        status, body = rig.gateway.dispatch("POST", "/v1/conversations/cloud-req-a-only/cancel", headers, b"")
+        self.assertEqual((status, body["charged_micro_usd"]), (200, 0))  # B's own tombstone only
+        self.assertEqual(rig.row("cloud-req-a-only")["state"], "completed")
+        self.assertEqual(rig.adapter.lookup("cloud-req-a-only")["state"], "completed")
         for auth in [{}, {"Authorization": "Bearer akc_" + "z" * 40}, {"Authorization": TOKEN_A}]:
             self.assertEqual(rig.gateway.dispatch("GET", "/v1/conversations/cloud-req-0001", auth, b"")[0], 401)
 
@@ -513,6 +522,266 @@ class ChatIntegrationTests(CloudTestCase):
             self.assertNotIn("/v1/conversations", text)
         center = (ROOT / "arkos_pilot" / "task_center.py").read_text(encoding="utf-8")
         self.assertNotIn("arkos_cloud", center)
+
+
+class StagingReadinessRegressionTests(CloudTestCase):
+    """Defects reproduced on 398fcc3 (see docs/CLOUD_STAGING_REVIEW.md) and their regressions."""
+
+    def test_second_gateway_instance_is_refused_without_touching_in_flight_rows(self):
+        hold = threading.Event()
+        rig = self.rig(provider=SimulatedProvider(hold=hold))
+        worker = threading.Thread(target=rig.adapter.converse, args=(request(),))
+        worker.start()
+        rig.provider.entered.wait(2)
+        with self.assertRaises(RuntimeError):
+            CloudGateway(gateway_config(), rig.tmp / "gw" / "ledger.sqlite3", SimulatedProvider())
+        self.assertEqual(rig.row()["state"], "sent")
+        hold.set()
+        worker.join(5)
+        self.assertEqual(rig.row()["state"], "completed")
+        self.assertEqual(rig.spend()["reserved"], 0)
+        self.assertGreater(rig.spend()["charged"], 0)
+
+    def test_incompatible_schema_is_refused(self):
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        path = Path(tmp.name) / "ledger.sqlite3"
+        db = sqlite3.connect(path)
+        db.execute(f"PRAGMA user_version={SCHEMA_VERSION + 1}")
+        db.close()
+        with self.assertRaises(RuntimeError):
+            CloudGateway(gateway_config(), path, SimulatedProvider())
+        gateway = CloudGateway(gateway_config(), Path(tmp.name) / "other.sqlite3", SimulatedProvider())
+        gateway.close()  # the lock of the refused instance was released; a valid one starts
+
+    def test_restart_keeps_tokens_reservations_spend_and_idempotency(self):
+        rig = self.rig(provider=SimulatedProvider(text=PROPOSAL_TEXT))
+        first = rig.adapter.converse(request())
+        rig.provider.behaviour = "lost"
+        rig.adapter.converse(request("cloud-req-0002"))
+        before = (rig.spend(), rig.spend("global"), rig.row("cloud-req-0002")["reserved"])
+        rig.gateway.close()
+        rig.gateway = CloudGateway(gateway_config(), rig.tmp / "gw" / "ledger.sqlite3", rig.provider)
+        rig.transport.gateway = rig.gateway
+        self.assertEqual((rig.spend(), rig.spend("global"), rig.row("cloud-req-0002")["reserved"]), before)
+        self.assertEqual(rig.adapter.converse(request())["proposals"], first["proposals"])  # token persisted
+        self.assertEqual(rig.adapter.converse(request("cloud-req-0002"))["error"]["code"], "outcome_uncertain")
+        self.assertEqual(len(rig.provider.calls), 2)
+
+    def test_revoked_token_is_blocked_without_restart(self):
+        rig = self.rig()
+        self.assertEqual(rig.adapter.converse(request())["status"], "ok")
+        self.assertTrue(rig.gateway.ledger.revoke_token(token_hash(TOKEN_A)))
+        result = rig.adapter.converse(request("cloud-req-0002"))
+        self.assertEqual(result["error"]["code"], "unsafe_configuration")
+        self.assertIsNone(rig.row("cloud-req-0002"))
+        auth = {"Authorization": "Bearer " + TOKEN_A}
+        self.assertEqual(rig.gateway.dispatch("GET", "/v1/conversations/cloud-req-0001", auth, b"")[0], 401)
+        self.assertEqual(rig.gateway.dispatch("POST", "/v1/conversations/cloud-req-0001/cancel", auth, b"")[0], 401)
+        self.assertEqual(len(rig.provider.calls), 1)
+        other = CloudConversationProvider(rig.config, rig.consent, rig.transport, TOKEN_B)
+        self.assertEqual(other.converse(request("cloud-req-0003"))["status"], "ok")
+
+    def test_operator_cli_issues_lists_and_revokes_while_gateway_runs(self):
+        rig = self.rig()
+        ledger = str(rig.tmp / "gw" / "ledger.sqlite3")
+        out = subprocess.run([sys.executable, "-B", "-m", "arkos_cloud", "token", "issue", "--ledger", ledger,
+                              "--user", "user-c"], cwd=ROOT, capture_output=True, text=True, timeout=30)
+        token = out.stdout.strip()
+        self.assertTrue(token.startswith("akc_"), out.stderr)
+        client = CloudConversationProvider(rig.config, rig.consent, rig.transport, token)
+        self.assertEqual(client.converse(request("cloud-req-c001"))["status"], "ok")
+        listing = subprocess.run([sys.executable, "-B", "-m", "arkos_cloud", "token", "list", "--ledger", ledger],
+                                 cwd=ROOT, capture_output=True, text=True, timeout=30).stdout
+        self.assertNotIn(token, listing)
+        prefix = token_hash(token)[:8]
+        self.assertIn(prefix, listing)
+        done = subprocess.run([sys.executable, "-B", "-m", "arkos_cloud", "token", "revoke", "--ledger", ledger,
+                               "--prefix", prefix], cwd=ROOT, capture_output=True, text=True, timeout=30)
+        self.assertEqual(done.returncode, 0, done.stderr)
+        self.assertEqual(client.converse(request("cloud-req-c002"))["error"]["code"], "unsafe_configuration")
+        self.assertEqual(len(rig.provider.calls), 1)
+
+    def test_day_change_carries_open_reservations_until_reconciled(self):
+        now = [1_800_000_000.0]
+        probe = self.rig()
+        cost = probe.gateway.reservation(c.validate_request(request()))
+        rig = self.rig(provider=SimulatedProvider("lost"), gateway=gateway_config(user_budget=cost, global_budget=cost))
+        rig.gateway.clock = lambda: now[0]
+        self.assertEqual(rig.adapter.converse(request("cloud-req-0001"))["error"]["code"], "outcome_uncertain")
+        now[0] += 86_400
+        rig.provider.behaviour = "ok"
+        self.assertEqual(rig.adapter.converse(request("cloud-req-0002"))["error"]["code"], "budget_exhausted")
+        self.assertEqual(len(rig.provider.calls), 1)
+        rig.gateway.ledger.reconcile("user-a", "cloud-req-0001", 100)
+        self.assertEqual(rig.adapter.converse(request("cloud-req-0003"))["status"], "ok")
+        day1 = time.strftime("%Y-%m-%d", time.gmtime(now[0] - 86_400))
+        self.assertEqual(rig.gateway.ledger.spend("user:user-a", day1), dict(reserved=0, charged=100))
+
+    def test_call_in_flight_across_midnight_settles_on_its_own_day(self):
+        now = [float(-(-1_800_000_000 // 86_400) * 86_400 - 1)]  # one second before a UTC midnight
+        hold = threading.Event()
+        rig = self.rig(provider=SimulatedProvider(hold=hold))
+        rig.gateway.clock = lambda: now[0]
+        worker = threading.Thread(target=rig.adapter.converse, args=(request(),))
+        worker.start()
+        rig.provider.entered.wait(2)
+        day1 = rig.row()["day"]
+        now[0] += 2
+        day2 = utc_day(now[0])
+        self.assertNotEqual(day1, day2)
+        self.assertEqual(rig.gateway.ledger.open_reservations("user-a"), rig.row()["reserved"])
+        hold.set()
+        worker.join(5)
+        self.assertEqual(rig.gateway.ledger.spend("user:user-a", day1)["reserved"], 0)
+        self.assertEqual(rig.gateway.ledger.spend("user:user-a", day2), dict(reserved=0, charged=0))
+        self.assertEqual(rig.gateway.ledger.open_reservations(), 0)
+
+    def test_reservation_covers_haiku_long_context_tier(self):
+        rig = self.rig(gateway=gateway_config(prices=HAIKU_5_5, user_budget=10**7, global_budget=10**7,
+                                              max_input_chars=c.MAX_HISTORY_CHARS),
+                       config=client_config(max_input_chars=c.MAX_HISTORY_CHARS))
+        worst = c.validate_request(dict(v=1, request_id="cloud-req-0001",
+                                        messages=[dict(role="user", content="😀" * 8000)] * 4))
+        bound = rig.gateway.input_bound(worst)
+        self.assertGreater(bound, 100_000)
+        billed = -(-bound * 500_000 // 1_000_000) + -(-DISCLOSURE["max_output_tokens"] * 2_500_000 // 1_000_000)
+        self.assertGreaterEqual(rig.gateway.reservation(worst), billed)
+        short = c.validate_request(request())
+        short_billed = (-(-rig.gateway.input_bound(short) * 100_000 // 1_000_000)
+                        + -(-DISCLOSURE["max_output_tokens"] * 500_000 // 1_000_000))
+        self.assertGreaterEqual(rig.gateway.reservation(short), short_billed)
+        rig.provider.usage = (100_001, 1000)  # actual usage over the threshold: whole request at long prices
+        rig.adapter.converse(worst)
+        self.assertEqual(rig.row()["charged"], -(-100_001 * 500_000 // 1_000_000) + -(-1000 * 2_500_000 // 1_000_000))
+
+    def test_usage_above_reservation_is_charged_and_flagged(self):
+        rig = self.rig(provider=SimulatedProvider(usage=(10**6, 10**4)))
+        self.assertEqual(rig.adapter.converse(request())["status"], "ok")
+        row = rig.row()
+        self.assertEqual(row["overrun"], 1)
+        self.assertEqual(row["charged"], 1_000_000 + 50_000)
+        bogus = self.rig(provider=SimulatedProvider(usage=(-5, 10)))
+        bogus.adapter.converse(request())
+        self.assertEqual(bogus.row()["charged"], bogus.gateway.reservation(c.validate_request(request())))
+
+    def test_retention_zero_stores_no_content_and_window_is_enforced(self):
+        rig = self.rig(gateway=gateway_config(gateway_retention_hours=0), config=client_config(gateway_retention_hours=0))
+        self.assertEqual(rig.adapter.converse(request())["status"], "ok")
+        self.assertIsNone(rig.row()["response"])
+        self.assertEqual(rig.adapter.converse(request())["error"]["code"], "duplicate_request")
+        self.assertEqual(len(rig.provider.calls), 1)
+        kept = self.rig()
+        kept.adapter.converse(request())
+        self.assertIsNotNone(kept.row()["response"])
+        self.assertEqual(kept.gateway.ledger.purge_content(24 * 3600, now=time.time() + 24 * 3600 + 1), 1)
+        self.assertIsNone(kept.row()["response"])
+
+    def test_ledger_errors_never_leave_a_transaction_open(self):
+        rig = self.rig()
+        ledger = rig.gateway.ledger
+        for call in (lambda: ledger.mark_sent("user-a", "missing-0001"),
+                     lambda: ledger.settle("user-a", "missing-0001", "completed"),
+                     lambda: ledger.reconcile("user-a", "missing-0001", 1)):
+            with self.assertRaises(LedgerError):
+                call()
+        self.assertFalse(ledger.db.in_transaction)
+        self.assertEqual(rig.adapter.converse(request())["status"], "ok")
+
+    def test_timeout_and_cancel_that_overtakes_the_request(self):
+        gate = threading.Event()
+        rig = self.rig(delay=gate)
+        with patch("arkos_cloud.adapter.time.monotonic", side_effect=[0, 0, 10_000, 10_000, 10_000]):
+            result = rig.adapter.converse(request(timeout_s=10))
+        self.assertEqual(result["error"]["code"], "outcome_uncertain")
+        deadline = time.monotonic() + 2
+        while not any(r["path"].endswith("/cancel") for r in rig.transport.requests) and time.monotonic() < deadline:
+            time.sleep(0.01)
+        gate.set()
+        deadline = time.monotonic() + 2
+        while len([r for r in rig.transport.requests if r["path"] == "/v1/conversations"]) < 1 and time.monotonic() < deadline:
+            time.sleep(0.01)
+        time.sleep(0.2)
+        self.assertEqual(rig.row()["state"], "cancelled")
+        self.assertEqual(rig.provider.calls, [])
+        self.assertEqual(rig.spend(), dict(reserved=0, charged=0))
+
+    def test_budget_holds_across_independent_connections_and_processes(self):
+        rig = self.rig()
+        path = rig.tmp / "gw" / "ledger.sqlite3"
+        day, amount, cap = utc_day(), 100, 1000  # room for exactly 10 reservations
+        ledgers = [Ledger(path) for _ in range(4)]
+        for ledger in ledgers:
+            self.addCleanup(ledger.close)
+        wins = []
+
+        def worker(index):
+            for n in range(5):
+                try:
+                    ledgers[index].reserve(f"thread-{index}-{n}", f"rid-{index}-{n:04d}", "d", amount, day, cap, cap)
+                    wins.append(1)
+                except LedgerError as exc:
+                    self.assertEqual(exc.code, "budget_exhausted")
+        threads = [threading.Thread(target=worker, args=(i,)) for i in range(4)]
+        script = ("import sys\nsys.path.insert(0, sys.argv[1])\nfrom arkos_cloud.ledger import Ledger, LedgerError\n"
+                  "led = Ledger(sys.argv[2]); won = 0\n"
+                  "for n in range(5):\n"
+                  "    try:\n"
+                  "        led.reserve('proc-%s-%d' % (sys.argv[3], n), 'rid-p%s-%04d' % (sys.argv[3], n), 'd', 100, sys.argv[4], 1000, 1000)\n"
+                  "        won += 1\n"
+                  "    except LedgerError as exc:\n"
+                  "        assert exc.code == 'budget_exhausted', exc.code\n"
+                  "print(won); led.close()\n")
+        procs = [subprocess.Popen([sys.executable, "-B", "-c", script, str(ROOT), str(path), str(i), day],
+                                  stdout=subprocess.PIPE, text=True) for i in range(3)]
+        for thread in threads:
+            thread.start()
+        for thread in threads:
+            thread.join(30)
+        proc_wins = sum(int(p.communicate(timeout=60)[0].strip()) for p in procs)
+        self.assertTrue(all(p.returncode == 0 for p in procs))
+        self.assertEqual(len(wins) + proc_wins, cap // amount)
+        self.assertEqual(rig.gateway.ledger.spend("global", day), dict(reserved=cap, charged=0))
+
+    def test_ledger_and_errors_do_not_expose_conversation_or_tokens(self):
+        secret_text = "CONVERSACION-PRIVADA-7f3a"
+        rig = self.rig(provider=SimulatedProvider(text="Respuesta RESPUESTA-PRIVADA-91c2"))
+        rig.adapter.converse(request(text=secret_text))
+        rig.provider.behaviour = "lost"
+        lost = rig.adapter.converse(request("cloud-req-0002", text=secret_text + " otra"))
+        too_long = rig.adapter.converse(request("cloud-req-0003", text=secret_text * 2000))
+        rig.gateway.close()
+        rig.gateway = CloudGateway(gateway_config(), rig.tmp / "gw" / "ledger.sqlite3", rig.provider)
+        blob = b"".join(p.read_bytes() for p in (rig.tmp / "gw").glob("ledger.sqlite3*"))
+        self.assertNotIn(secret_text.encode(), blob)            # requests are stored as a digest only
+        for token in (TOKEN_A, TOKEN_B):
+            self.assertNotIn(token.encode(), blob)              # tokens as sha256 only
+        self.assertIn(b"RESPUESTA-PRIVADA-91c2", blob)          # the reply, within the retention window
+        for result in (lost, too_long):
+            self.assertNotIn(secret_text, json.dumps(result))
+        consent = (rig.tmp / "pc" / "cloud-consent.json").read_text(encoding="utf-8")
+        self.assertNotIn(TOKEN_A, consent)
+
+    def test_gateway_change_of_provider_model_or_terms_requires_new_consent(self):
+        for change in (dict(provider="other-llm"), dict(model="synthetic-model-2"), dict(provider_retention_days=90),
+                       dict(gateway_retention_hours=48), dict(policy_version="2026-12-01"), dict(max_output_tokens=2048)):
+            with self.subTest(change=change):
+                rig = self.rig(gateway=gateway_config(**change))
+                self.assertEqual(rig.adapter.converse(request())["error"]["code"], "consent_required")
+                self.assertEqual(rig.provider.calls, [])
+                self.assertIsNone(rig.row())
+
+    def test_cloud_package_cannot_approve_execute_or_offer_tools(self):
+        import inspect
+        params = list(inspect.signature(SimulatedProvider.complete).parameters)
+        self.assertEqual(params, ["self", "system", "messages", "max_output_tokens", "timeout_s", "cancel_event"])
+        rig = self.rig()
+        rig.adapter.converse(request())
+        self.assertEqual(rig.provider.calls[0]["system"], c.SYSTEM_PROMPT)
+        for path in (ROOT / "arkos_cloud").glob("*.py"):
+            source = path.read_text(encoding="utf-8")
+            for forbidden in ("from arkos_pilot", "import arkos_pilot", "approve(", "run_next", "subprocess", "tools=", '"tools"', "tool_choice"):
+                self.assertNotIn(forbidden, source, f"{path.name}: {forbidden}")
 
 
 if __name__ == "__main__":

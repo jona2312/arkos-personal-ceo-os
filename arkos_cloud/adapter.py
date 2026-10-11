@@ -82,6 +82,7 @@ class CloudConversationProvider:
                 # A late gateway answer lands in `outcome`, which nobody reads any more.
                 return c.response(rid, "cancelled", error=("cancelled", "Cancelado por el usuario"))
             if time.monotonic() > deadline:
+                self._cancel_remote(rid)  # stop further spend; the outcome stays uncertain
                 return c.response(rid, "timeout", error=("outcome_uncertain",
                                   "Sin respuesta a tiempo; resultado incierto, no se reintenta"))
             worker.join(POLL_S)

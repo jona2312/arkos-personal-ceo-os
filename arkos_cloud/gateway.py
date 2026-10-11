@@ -10,12 +10,14 @@ from dataclasses import dataclass
 import hashlib
 import json
 import math
+import os
+from pathlib import Path
 import re
 import threading
 import time
 
 from arkos_hermes import contract as c
-from .ledger import Ledger, LedgerError
+from .ledger import Ledger, LedgerError, token_hash
 
 MAX_BODY_BYTES = 256 * 1024
 TOKEN = re.compile(r"^akc_[A-Za-z0-9_-]{32,128}$")
@@ -42,8 +44,43 @@ class ProviderLost(Exception):
     """Sent, but the outcome is unknown (timeout, reset). Kept uncertain; never retried."""
 
 
-def token_hash(token):
-    return hashlib.sha256(token.encode("utf-8")).hexdigest()
+class InstanceLock:
+    """Exclusive OS lock on '<ledger>.lock' for the gateway's lifetime.
+
+    The ledger assumes a single gateway: recovery turns another instance's in-flight calls
+    into 'uncertain'. A second gateway on the same file fails here, before touching it.
+    Valid on a local disk of a single host; network file systems are not supported.
+    """
+
+    def __init__(self, ledger_path):
+        self.path = Path(str(ledger_path) + ".lock")
+        self.path.parent.mkdir(parents=True, exist_ok=True)
+        self.handle = open(self.path, "a+b")
+        try:
+            if os.name == "nt":
+                import msvcrt
+                self.handle.seek(0)
+                msvcrt.locking(self.handle.fileno(), msvcrt.LK_NBLCK, 1)
+            else:
+                import fcntl
+                fcntl.flock(self.handle.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except OSError:
+            self.handle.close()
+            raise RuntimeError("Otra instancia del gateway ya usa este ledger; no se inicia una segunda.")
+
+    def release(self):
+        if self.handle.closed:
+            return
+        try:
+            if os.name == "nt":
+                import msvcrt
+                self.handle.seek(0)
+                msvcrt.locking(self.handle.fileno(), msvcrt.LK_UNLCK, 1)
+            else:
+                import fcntl
+                fcntl.flock(self.handle.fileno(), fcntl.LOCK_UN)
+        finally:
+            self.handle.close()
 
 
 def request_digest(request):
@@ -56,28 +93,51 @@ def utc_day(now=None):
 
 
 class CloudGateway:
-    def __init__(self, config, ledger_path, provider, token_hashes, clock=time.time):
-        """token_hashes: {sha256(akc_ token): user_id}. Plain tokens are never stored."""
+    def __init__(self, config, ledger_path, provider, token_hashes=None, clock=time.time):
+        """token_hashes: optional {sha256(akc_ token): user_id} to register (persisted, hash only).
+
+        Tokens live in the ledger and are checked on every request, so revoking one with
+        Ledger.revoke_token (operator CLI) takes effect without a restart.
+        """
         self.config, self.provider, self.clock = config, provider, clock
-        self.tokens = dict(token_hashes)
-        self.ledger = Ledger(ledger_path)
-        self.ledger.recover()
+        self._instance = InstanceLock(ledger_path)
+        try:
+            self.ledger = Ledger(ledger_path)
+            for digest, user in (token_hashes or {}).items():
+                self.ledger.register_token_hash(digest, user)
+            self.ledger.recover()
+        except BaseException:
+            self._instance.release()
+            raise
         self._cancel = {}
         self._lock = threading.Lock()
 
     def close(self):
-        self.ledger.close()
+        try:
+            self.ledger.close()
+        finally:
+            self._instance.release()
 
     # --- cost ---------------------------------------------------------------
-    def reservation(self, request):
-        """Upper bound: BPE tokenizers emit at most one token per UTF-8 byte, plus framing."""
+    def input_bound(self, request):
+        """Assumed upper bound on billable input tokens: one per UTF-8 byte, plus framing.
+
+        Holds for byte-level BPE tokenizers; staging must confirm it against usage reports
+        (an excess is recorded as overrun). No prompt caching is used, so no cache writes.
+        """
         text = c.SYSTEM_PROMPT + "".join(m["content"] for m in request["messages"])
-        tokens_in = len(text.encode("utf-8")) + 16 * len(request["messages"]) + 64
-        return self._cost(tokens_in, self.config.disclosure.max_output_tokens)
+        return len(text.encode("utf-8")) + 16 * len(request["messages"]) + 64
+
+    def reservation(self, request):
+        """Worst case: the input bound plus max_output_tokens (which includes any thinking)."""
+        return self._cost(self.input_bound(request), self.config.disclosure.max_output_tokens)
 
     def _cost(self, tokens_in, tokens_out):
-        return (math.ceil(tokens_in * self.config.input_micro_usd_per_mtok / 1_000_000)
-                + math.ceil(tokens_out * self.config.output_micro_usd_per_mtok / 1_000_000))
+        cfg = self.config
+        long = cfg.long_context_threshold_tokens and tokens_in > cfg.long_context_threshold_tokens
+        price_in = cfg.long_input_micro_usd_per_mtok if long else cfg.input_micro_usd_per_mtok
+        price_out = cfg.long_output_micro_usd_per_mtok if long else cfg.output_micro_usd_per_mtok
+        return math.ceil(tokens_in * price_in / 1_000_000) + math.ceil(tokens_out * price_out / 1_000_000)
 
     # --- API ----------------------------------------------------------------
     def authenticate(self, headers):
@@ -85,7 +145,7 @@ class CloudGateway:
         token = auth[7:] if auth.startswith("Bearer ") else ""
         if not TOKEN.match(token):
             return None
-        return self.tokens.get(token_hash(token))
+        return self.ledger.user_for(token_hash(token))
 
     def converse(self, user, consent, body):
         """Returns (http_status, json_body)."""
@@ -102,6 +162,8 @@ class CloudGateway:
             return 400, _error(rid, "invalid_request", "La conversación supera el límite de entrada Cloud")
         digest = request_digest(request)
         amount = self.reservation(request)
+        retention_s = self.config.disclosure.gateway_retention_hours * 3600
+        self.ledger.purge_content(retention_s)
         try:
             created, row = self.ledger.reserve(user, rid, digest, amount, utc_day(self.clock()),
                                                self.config.per_user_daily_micro_usd, self.config.global_daily_micro_usd)
@@ -143,20 +205,21 @@ class CloudGateway:
                                             max_output_tokens=self.config.disclosure.max_output_tokens,
                                             timeout_s=request["timeout_s"], cancel_event=event)
         except (ProviderNotSent, ProviderRejected):
-            row = self.ledger.settle(user, rid, "not_charged")
-            if row["state"] == "cancelled":
+            row = self._settle(user, rid, "not_charged")
+            if row is not None and row["state"] == "cancelled":
                 return c.response(rid, "cancelled", error=("cancelled", "Pedido cancelado"))
             return _error(rid, "provider_unavailable", "El proveedor Cloud rechazó o no recibió el pedido")
         except Exception:  # ProviderLost or anything unexpected: may have been billed
-            self.ledger.settle(user, rid, "uncertain")
+            self._settle(user, rid, "uncertain")
             return _error(rid, "outcome_uncertain", "Resultado incierto; no se repite automáticamente")
         if not isinstance(result, ProviderResult) or not isinstance(result.text, str):
-            self.ledger.settle(user, rid, "uncertain")
+            self._settle(user, rid, "uncertain")
             return _error(rid, "outcome_uncertain", "Respuesta del proveedor ilegible")
-        known = isinstance(result.input_tokens, int) and isinstance(result.output_tokens, int)
+        known = (type(result.input_tokens) is int and type(result.output_tokens) is int
+                 and result.input_tokens >= 0 and result.output_tokens >= 0)
         charged = self._cost(result.input_tokens, result.output_tokens) if known else reserved
         if len(result.text) > self.config.disclosure.max_output_tokens * 16:
-            self.ledger.settle(user, rid, "completed", charged=charged, response=None)
+            self._settle(user, rid, "completed", charged=charged)
             return _error(rid, "output_invalid", "La salida excedió el límite configurado")
         reply, proposals, rejected = c.parse_reply(result.text)
         if not reply and not proposals:
@@ -165,16 +228,22 @@ class CloudGateway:
             body = c.response(rid, "ok", reply=reply, proposals=proposals,
                               diagnostics={"processing": "cloud", "proposals_rejected": rejected,
                                            "charged_micro_usd": charged, "usage_known": known})
-        row = self.ledger.settle(user, rid, "completed", charged=charged,
-                                 response=body if body["status"] == "ok" else None)
+        keep = body["status"] == "ok" and self.config.disclosure.gateway_retention_hours > 0
+        row = self._settle(user, rid, "completed", charged=charged, response=body if keep else None)
+        if row is None:
+            return _error(rid, "outcome_uncertain", "No se pudo registrar el resultado")
         if row["state"] == "cancelled":
             return c.response(rid, "cancelled", error=("cancelled", "Pedido cancelado"))
         return body
 
+    def _settle(self, user, rid, outcome, **kwargs):
+        try:
+            return self.ledger.settle(user, rid, outcome, **kwargs)
+        except LedgerError:
+            return None
+
     def cancel(self, user, rid):
-        row = self.ledger.request_cancel(user, rid)
-        if row is None:
-            return 404, {"error": {"code": "not_found"}}
+        row = self.ledger.request_cancel(user, rid, day=utc_day(self.clock()))
         with self._lock:
             event = self._cancel.get((user, rid))
         if event:
