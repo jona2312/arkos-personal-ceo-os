@@ -14,6 +14,7 @@ import webbrowser
 
 from .relay_snapshot import DEVICE, read_view
 from .catalog import propose
+from .providers import select_provider
 from .core import Queue, clip_payload
 from .chat import Conversations, ChatError, REQUEST_ID
 
@@ -37,6 +38,8 @@ class TaskCenter(ThreadingHTTPServer):
     def __init__(self, state_dir, port=0, relay_snapshot=None, relay_device_id=None, bridge=None, chat_mode='hermes'):
         if (relay_snapshot is None) != (relay_device_id is None) or (relay_device_id is not None and not DEVICE.fullmatch(relay_device_id)):
             raise ValueError("Configurá juntos el snapshot y el ID de dispositivo válido.")
+        # Reject unavailable providers before opening a socket or creating state.
+        select_provider(bridge, chat_mode)
         self.relay_snapshot = relay_snapshot
         self.relay_device_id = relay_device_id
         self.root = Path(state_dir).resolve()

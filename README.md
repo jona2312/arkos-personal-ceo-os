@@ -1,164 +1,72 @@
 # ARKOS Personal CEO OS
 
-## Centro de tareas local
+Asistente personal y de trabajo: conversar, revisar propuestas y seguir tareas
+con aprobación humana. Proyecto de INPiensa / INB, impulsado por Jona Romero.
 
-Interfaz responsive conectada a la cola del piloto: notas, recortes, revisión,
-aprobación, ejecución y resultados. Instrucciones y límites en
-[Task Center](docs/task-center/README.md). Correo, WhatsApp y sincronización
-celular–PC figuran como pendientes; el preparador todavía no conecta el chat de Hermes.
+**Estado: piloto en desarrollo.** Las capacidades dependen de la rama y su evidencia
+de aceptación. La interfaz se ha probado con respuestas sintéticas; la conexión
+Hermes/Qwen real del centro de tareas sigue pendiente de aceptación en la PC.
 
-# Piloto de escritorio ARKOS
+## Qué está implementado
 
-El nuevo trabajo de escritorio está en [DESKTOP_PILOT.md](docs/DESKTOP_PILOT.md):
-inventario real, componentes seleccionados de GitHub, prueba local, preparación
-para Windows y roadmap. Ejecutar `python -m arkos_pilot doctor` desde este repo.
-Este incremento no demuestra ni modifica el despliegue de los workflows existentes.
+- Centro de tareas responsive: notas y recortes de video, revisión, aprobación
+  explícita, ejecución y resultados. Los recortes requieren FFmpeg.
+- Chat asíncrono mediante HermesBridge: historial de sesión, cancelación, errores
+  y propuestas de notas. Crear una tarea no la aprueba ni la ejecuta.
+- Tema neuronal, modo ligero y reducción de movimiento; actividad visual basada
+  en estados observados, no telemetría continua del modelo.
+- Servicio relay, agente y snapshot local de lectura. La vista remota conserva
+  sus estados y no puede aprobar, ejecutar ni descargar resultados remotos.
+- Launcher Windows con CheckOnly y selección de carpeta/puerto de prueba.
 
-El piloto Hermes tiene un [catálogo de tareas y contexto](docs/HERMES_DAILY_PILOT.md)
-y un [registro de pruebas en Windows](docs/HERMES_DESKTOP_TRIAL_RESULTS_2026-10-07.md).
-Incluye scripts para aplicar el contexto con backup y medir cinco turnos sintéticos
-de voz; los límites de esa medición se documentan junto a los resultados.
+## Qué todavía no es un producto listo
 
-> Tu CEO no necesita otro dashboard. Necesita un agente que piense, recuerde y actue.
+| Capacidad | Estado |
+|---|---|
+| Hermes/Qwen en el chat | Adaptador implementado; aceptación con modelo real pendiente |
+| Cloud para el centro de tareas | No implementado; [contrato y próximos pasos](docs/LOCAL_CLOUD_CONVERSATION.md) |
+| Voz y chat de equipo | Pendientes en esta interfaz |
+| Correo, calendario y WhatsApp de extremo a extremo | No acreditados como integraciones operativas del piloto |
+| Relay productivo celular–PC | Código y pruebas; despliegue/aceptación real pendientes |
+| Instalador para usuarios finales | Pendiente; el launcher aún requiere Python existente |
+| Memoria conversacional persistente | Pendiente; el historial actual se pierde al reiniciar el servidor |
 
-ARKOS es un sistema operativo ejecutivo basado en agentes con memoria persistente, interfaz por WhatsApp, voz conversacional y aprobacion humana para acciones sensibles.
+## Probar el centro local
 
-Construido bajo la tesis de transicion de SaaS a Agentic as a Service (GaaS): el valor no esta en la herramienta, sino en el trabajo ejecutado por el agente.
+Usar un checkout aislado y Python 3.11+ existente. En Windows, desde el repo:
 
----
-
-## Arquitectura
-
-```text
-WhatsApp Cloud API
-       |
-   n8n Webhook
-       |
-ARKOS_WHATSAPP_CLOUD_INBOX (canal puro)
-       |
-ARKOS_CEO_AGENT (cerebro central)
-  |-- search_memory (Supabase)
-  |-- write_memory (Supabase)
-  |-- send_whatsapp_text
-  |-- send_whatsapp_audio (TTS Marin)
-  |-- approval_handler
-       |
-  Tres departments internos:
-  1. Agenda & Operaciones
-  2. Documentos & Comunicacion
-  3. Finanzas & Control
+```powershell
+./scripts/Open-Arkos.ps1 -StateDirectory "$env:LOCALAPPDATA\ArkosTaskCenterTrial" -CheckOnly
+./scripts/Open-Arkos.ps1 -StateDirectory "$env:LOCALAPPDATA\ArkosTaskCenterTrial"
 ```
 
----
+Sin configuración Hermes la pantalla indica **Hermes por conectar**. No instala
+modelos ni representa una conversación real. Ver requisitos y opciones en la
+[guía del launcher](docs/task-center/GUIDED_LAUNCHER.md).
+Para el recorrido sintético, comandos, cierre y límites, consultar la
+[aceptación Windows](docs/task-center/CONVERSATION_ACCEPTANCE_2026-10-09.md).
 
-## Stack
+## Documentación del piloto
 
-| Componente | Tecnologia |
-|-----------|-----------|
-| Canal | WhatsApp Business Platform / Cloud API |
-| Orquestador | n8n |
-| Cerebro IA | OpenAI gpt-4o-mini (router) + gpt-4o (vision/complejo) |
-| DB operativa | Supabase PostgreSQL |
-| Memoria semantica | pgvector + HNSW index |
-| TTS | OpenAI gpt-4o-mini-tts, voz Marin, formato opus |
-| STT | OpenAI Whisper |
-| Dashboard | Next.js + Supabase (futuro) |
-| Memoria visible | Obsidian Markdown (futuro) |
+- [Centro de tareas](docs/task-center/README.md)
+- [Chat y propuestas](docs/task-center/CONVERSATION_HOME.md)
+- [Puente Hermes](docs/HERMES_BRIDGE.md)
+- [Local y Cloud: contrato común y aceptación pendiente](docs/LOCAL_CLOUD_CONVERSATION.md)
+- [Entrada conversacional y diseño aplicado](docs/task-center/ASSISTANT_ENTRY_2026-10-10.md)
+- [Contrato relay](docs/RELAY_CONTRACT.md)
+- [Integración del lector](docs/task-center/RELAY_INTEGRATION.md)
+- [Piloto de escritorio](docs/DESKTOP_PILOT.md)
 
----
+## Infraestructura experimental anterior
 
-## Estructura del repositorio
+El repositorio también conserva migraciones Supabase, workflows n8n y documentos
+para WhatsApp y agentes empresariales. Su presencia no acredita despliegue,
+seguridad ni funcionamiento actual. No son requisitos para abrir el centro local.
+Ver [arquitectura](docs/ARCHITECTURE.md), [workflows](docs/N8N_WORKFLOWS.md) y
+[reglas de seguridad](docs/SECURITY_RULES.md) antes de planificar su integración.
 
-```
-arkos-personal-ceo-os/
-  docs/
-    ARCHITECTURE.md          # Arquitectura agentic v2
-    N8N_WORKFLOWS.md         # Documentacion de los 7 workflows
-    SUPABASE_SCHEMA.md       # Schema completo de base de datos
-    SECURITY_RULES.md        # Reglas de seguridad y aprobacion
-    MIGRATION_TO_ARKOS_CORE_API.md  # Tool contracts para migracion
-    WHATSAPP_CLOUD_API_SETUP.md     # Setup WhatsApp Cloud API
-    ROADMAP.md               # Roadmap por fases
-    CHECKLIST_FASE_1.md      # Checklist operativo Fase 1
-    ARKOS_PERSONAL_CEO_OS_MASTER_SPEC.md  # Spec completa
-  supabase/
-    migrations/
-      001_init_users.sql
-      002_arkos_items.sql
-      003_messages.sql
-      004_daily_summaries.sql
-      005_email_summaries.sql
-      006_meeting_minutes.sql
-      007_expenses.sql
-      008_approvals.sql
-      009_memory_embeddings.sql
-      010_workflow_compatibility.sql
-  n8n/
-    workflows/               # 7 workflows JSON para importar
-      ARKOS_WHATSAPP_CLOUD_INBOX.json
-      ARKOS_CEO_AGENT.json
-      ARKOS_MEMORY_SEARCH.json
-      ARKOS_MEMORY_WRITE.json
-      ARKOS_SEND_WHATSAPP_TEXT.json
-      ARKOS_SEND_WHATSAPP_AUDIO.json
-      ARKOS_APPROVAL_HANDLER.json
-    notes/
-      workflow-test-plan.md  # 10 tests E2E
-  prompts/
-    arkos_ceo_router.md      # System prompt CEO Agent
-    tts_marin_voice.md       # Config voz TTS
-  .env.example
-  .gitignore
-```
+## Licencia y contribuciones
 
----
-
-## Reglas de aprobacion
-
-ARKOS puede actuar autonomamente: guardar notas, crear tareas, recordatorios, resumir mails, generar minutas.
-
-ARKOS requiere aprobacion explicita para:
-- Enviar mails a terceros
-- Enviar WhatsApp a terceros
-- Mover reuniones sensibles
-- Confirmar gastos como pagados
-- Borrar informacion
-- Compartir documentos
-- Llamar a terceros
-
----
-
-## Quickstart
-
-1. Crear proyecto Supabase y ejecutar migrations 001-010
-2. Importar workflows en n8n (orden en N8N_WORKFLOWS.md)
-3. Configurar variables de entorno (ver .env.example)
-4. Activar todos los workflows
-5. Configurar webhook Meta con URL n8n + verify token
-6. Enviar "Hola Arkos" por WhatsApp
-
----
-
-## Documentacion
-
-| Documento | Contenido |
-|-----------|-----------|
-| [ARCHITECTURE.md](docs/ARCHITECTURE.md) | Arquitectura agentic, flujo principal, componentes |
-| [N8N_WORKFLOWS.md](docs/N8N_WORKFLOWS.md) | 7 workflows documentados con flujo y webhooks |
-| [SUPABASE_SCHEMA.md](docs/SUPABASE_SCHEMA.md) | 9 tablas, indices, funciones RPC |
-| [SECURITY_RULES.md](docs/SECURITY_RULES.md) | Seguridad, RLS, aprobaciones |
-| [MIGRATION_TO_ARKOS_CORE_API.md](docs/MIGRATION_TO_ARKOS_CORE_API.md) | Tool contracts para migracion futura |
-| [WHATSAPP_CLOUD_API_SETUP.md](docs/WHATSAPP_CLOUD_API_SETUP.md) | Setup WhatsApp Cloud API en Meta |
-| [ROADMAP.md](docs/ROADMAP.md) | Roadmap Fases 0-8 |
-
----
-
-## Estado actual
-
-Fase 1 en deploy. Schema, workflows y documentacion completos.
-
----
-
-## Licencia
-
-Proyecto privado. Jona Romero / INB.
+La licencia pública y las condiciones comerciales están pendientes de definición
+y revisión. Este README no concede una licencia nueva ni cambia los derechos de
+terceros. Las dependencias conservan sus condiciones y avisos correspondientes.

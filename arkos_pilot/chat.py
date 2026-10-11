@@ -5,6 +5,7 @@ import threading
 
 from arkos_hermes import contract as c
 from .core import Queue, validate
+from .providers import select_provider
 
 REQUEST_ID = re.compile(r'[A-Za-z0-9_.:-]{8,64}')
 PROPOSAL_ID = re.compile(r'prp_[0-9a-f]{24}')
@@ -19,8 +20,9 @@ class ChatError(ValueError):
 
 class Conversations:
     def __init__(self, root, bridge=None, mode='hermes'):
-        self.root, self.bridge = root, bridge
-        self.mode = mode if bridge else 'unconfigured'
+        selected = select_provider(bridge, mode)
+        self.root, self.bridge = root, selected.bridge
+        self.mode, self.processing = selected.mode, selected.processing
         self.lock = threading.RLock()
         self.turns = {}
         self.active = None
@@ -28,7 +30,7 @@ class Conversations:
 
     def status(self):
         with self.lock:
-            return dict(configured=self.bridge is not None, mode=self.mode,
+            return dict(configured=self.bridge is not None, mode=self.mode, processing=self.processing,
                         active_request_id=self.active, remaining=MAX_TURNS-len(self.turns))
 
     def _view(self, turn):
