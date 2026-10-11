@@ -1,6 +1,8 @@
 # Un ARKOS, dos formas de procesamiento
 
-Estado: base de integración. Local conserva HermesBridge; Cloud NO está implementado.
+Estado: base de integración. Local conserva HermesBridge. Cloud tiene adaptador y gateway con
+transporte simulado (`docs/CLOUD_ADAPTER.md`), pero sigue deshabilitado en el selector y la UI;
+el despliegue está propuesto en `docs/CLOUD_DEPLOYMENT_PROPOSAL.md`.
 Este documento y su selector no prueban una conexión a Qwen ni aislamiento del sistema operativo.
 
 ## Lo que cambia ahora
