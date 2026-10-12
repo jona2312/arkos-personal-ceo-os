@@ -142,6 +142,9 @@ El alta propuesta es **PC primero**: instalar ARKOS y crear allí el archivo pri
 principal; luego usar el celular como companion vinculado al mismo dueño. La cuenta
 y el alias del producto no dependen de GitHub. El celular conserva copias selectivas
 y acceso remoto según permisos, sin cambiar silenciosamente la autoridad del archivo.
+Vincularlo no autoriza explorar su galería, contactos, carpetas o contenido privado.
+El companion opera en su sandbox; adjuntar algo del celular requiere selección
+explícita mediante picker/Compartir. No se propone escanear el teléfono.
 
 Requisitos antes de admitir clientes independientes:
 
@@ -398,6 +401,26 @@ si B lo habilita, fallido o vencido. Aceptación del push no demuestra que B lo 
 Idempotencia por remitente/mensaje, deduplicación, expiración y consulta de estado;
 no reenvío automático de contenido incierto como mensaje nuevo.
 
+### Documentos generados y adjuntos privados
+
+Primero texto; después documentos generados o seleccionados explícitamente, como
+PDF, para que el destinatario los reciba en su app móvil o PC. Galería general,
+fotos sociales y explorar contenido privado del celular no son prioridad ni permiso
+implícito. Elegir archivo y destinatario exactos antes de transmitir; una invitación
+aceptada no autoriza compartir el archivo personal completo.
+
+La fase de adjuntos debe cifrar en el cliente, transportar el archivo cifrado y
+entregar claves solo a dispositivos autorizados mediante el protocolo revisado.
+Definir límites de tamaño/tipo, expiración y cuotas de almacenamiento/transferencia,
+descarga reanudable, hashes de integridad, cola offline y estados separados de mensaje
+y descarga. No abrir o ejecutar archivos automáticamente; tratar contenido como
+no confiable. Revocar o vencer la copia servidor no borra descargas ya hechas.
+
+El usuario ve qué archivo sale, quién lo recibe y qué servicio guarda el objeto
+cifrado. El celular puede recibirlo con la PC apagada si ya se subió; si permanece
+solo en esa PC, mostrar pendiente. Costear almacenamiento, ancho de banda, relay,
+operación e ingeniería por separado de generar el documento con IA.
+
 ### Alternativa SMS opcional para quien no tiene la app
 
 App-a-app usa internet y datos, no SMS. Para un contacto sin ARKOS, el MVP Android
@@ -457,6 +480,20 @@ grupales solo tras revisar fan-out, cifrado/membresía, abuso, coste y capacidad
 subagentes internos se identifican como tales y no reciben cuentas/autoridad humana
 por defecto. El MVP de mensajes no crea una red de agentes autónomos sin permisos.
 
+### Opciones abiertas para reutilizar software
+
+- **Matrix:** candidato para reutilizar mensajería, dispositivos y adjuntos cifrados
+  definidos por un protocolo existente. La [guía oficial de E2EE](https://matrix.org/docs/matrix-concepts/end-to-end-encryption/)
+  documenta claves por dispositivo y adjuntos; adoptar una implementación no sustituye
+  revisión de su versión, licencias, seguridad, configuración y coste de servidor.
+- **libp2p:** candidato de conectividad P2P y [hole punching](https://libp2p.io/docs/hole-punching/),
+  con ayuda de peers/relays. Es un bloque de red; ARKOS aún tendría que resolver
+  identidad humana, contactos, mensajes durables, push, permisos y recuperación.
+
+Son opciones a comparar, no una selección final ni prueba de coste cero. Evaluar
+complejidad y operación total frente a infraestructura mínima, sin asumir que un
+componente P2P reemplaza todos los servicios de mensajería.
+
 ### Arranque y encendido remoto
 
 El inicio al entrar en el SO puede ofrecerse como preferencia reversible, con
@@ -513,6 +550,7 @@ o una muestra breve a todas las PC, voces, redes o clientes.
 | LV3: celular e híbrido opcional | Emparejamiento, sesión remota, relay y sincronización elegida; cloud solo tras autorización y límites | Consentimiento, autenticación, red, conflictos, coste y recuperación probados; PC offline visible |
 | LV4: distribución por cliente | Paquete firmado, onboarding vacío, cuentas separadas, exportación y soporte | Otra PC y otro cliente, salida del servicio sin perder archivo, actualización/desinstalación y revisión de seguridad/licencias |
 | COM1: mensajería humana | Identidades, contactos aceptados, sobre de mensaje y push mínimo; primero simulación | Atribución, entrega offline, permisos, cifrado, antispam, bloqueo y revocación validados |
+| COM1B: documentos privados | Adjuntos generados/seleccionados, cifrado cliente, límites y descarga reanudable | Integridad, cuotas, expiración, envío offline y recepción en móvil/PC sin explorar el teléfono |
 | COM2: llamadas app-a-app | Invitación y llamada entre personas sin grabación por defecto | Dispositivos reales, aceptación/rechazo, red y privacidad; no autoriza delegación entre agentes |
 | COM3: espacios y grupos | Grupos pequeños con roles; ampliación posterior según evidencia | Membresía, invitaciones, claves, privacidad, abuso y coste probados antes de escalar |
 
