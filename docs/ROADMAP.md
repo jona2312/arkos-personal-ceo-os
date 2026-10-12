@@ -1,5 +1,16 @@
 # ARKOS Personal CEO OS — Roadmap
 
+## Alcance y estado del roadmap
+
+Las Fases 0–8 describen el recorrido original WhatsApp/n8n/Supabase. Sus marcas
+historicas no acreditan un despliegue actual; por ejemplo Fase 0 figura completa
+pero mantiene tareas pendientes. Los pilotos desktop/relay/chat estan en PRs
+abiertos. Ver la [matriz de evidencia y propuesta descargable](ARKOS_DOWNLOADABLE_LIVE_VOICE_PROPOSAL.md)
+antes de interpretar una capacidad como disponible.
+
+La nueva linea de producto suma app propia PC/celular, voz live, permisos locales
+y archivo privado durable por cliente. Se conserva el canal asincrono existente.
+
 ## Fase 0 — Setup [COMPLETA]
 
 | Tarea | Estado |
@@ -97,6 +108,9 @@ Jona -> WhatsApp -> INBOX -> CEO Agent
 
 **Objetivo:** Audio entrante -> transcripcion -> respuesta con voz Marin
 
+Esta fase trata mensajes de audio asincronos de WhatsApp. La voz en vivo dentro de
+la app pertenece a la linea LV siguiente y requiere su propio contrato y pruebas.
+
 | Tarea | Dependencia |
 |-------|------------|
 | Descargar media desde WhatsApp Cloud API | Fase 1 completa |
@@ -189,6 +203,13 @@ Jona -> WhatsApp -> INBOX -> CEO Agent
 
 **Objetivo:** Memoria visible en Markdown
 
+**Ampliacion propuesta:** el producto descargable debe conservar un archivo local
+durable del usuario, por proyectos/temas, incluso cuando use procesamiento cloud.
+Obsidian sera una vista compatible de esos Markdown, no una dependencia ni la unica
+salida del backend. Archivo, exportacion y recuperacion pasan a ser requisitos
+transversales de LV1–LV4. El mirror Supabase original permanece como camino de
+compatibilidad hasta diseñar y validar la migracion; este documento no la ejecuta.
+
 | Tarea | Dependencia |
 |-------|------------|
 | Templates Markdown | Definidos |
@@ -197,6 +218,32 @@ Jona -> WhatsApp -> INBOX -> CEO Agent
 | Meeting notes | Minutas |
 | Decision log | Items tipo decision |
 | Git sync opcional | Repo separado |
+
+---
+
+## Linea propuesta — ARKOS descargable, archivo propio y voz live
+
+**Estado: diseño; sin fechas de lanzamiento ni tareas marcadas completas.**
+Detalle, dependencias y criterios en la [propuesta de arquitectura](ARKOS_DOWNLOADABLE_LIVE_VOICE_PROPOSAL.md).
+
+| Etapa | Resultado esperado | Puerta de salida |
+|-------|--------------------|-----------------|
+| LV0 | Reconciliar pilotos, permisos, modos y residencia de datos | Baseline revisada y una autoridad por tarea |
+| LV1 | Contratos de voz y archivo portable, simulacion, exportacion | Compatibilidad, permisos, cancelacion e importacion/exportacion probados con datos sinteticos |
+| LV2 | Voz local real y archivo por proyectos/temas en PC | Medicion y aceptacion humana, persistencia, backup/restauracion y limites de red |
+| LV3 | Celular e hibrido opcional, sincronizacion elegida | Autenticacion, privacidad, conflictos, cuotas y recuperacion verificados |
+| LV4 | Paquete por cliente y salida del servicio sin perder archivo | Otra PC/cliente, aislamiento, firma, actualizacion, desinstalacion y exportacion independiente |
+| COM1 | Mensajeria entre personas, asistentes renombrables y push | Identidades/contactos, entrega con PC apagada, cifrado y bloqueo/revocacion |
+| COM2 | Llamadas humanas app-a-app, separadas de voz IA | Aceptacion/rechazo, privacidad y pruebas de dispositivos/red |
+| COM3 | Espacios personales/trabajo y grupos pequeños | Roles, invitaciones, claves, abuso y costes antes de escalar |
+| Producto comercial | Ediciones gratis/pago, vinculacion guiada y packs por profesion | Licencias, compatibilidad y costes por usuario medidos antes de fijar precios |
+
+No reemplaza ni fusiona los PR existentes. Procesamiento cloud, sincronizacion y
+permisos son elecciones separadas; descargar una app no convierte los modelos cloud
+en locales. Fiabilidad, memoria durable y distribucion requieren evidencia propia.
+
+Direccion de mensajeria personal/trabajo aprobada por Jona el 2026-10-12. COM1–COM3
+siguen pendientes de implementacion y revision tecnica; no autoriza merge o deploy.
 
 ---
 
@@ -218,3 +265,4 @@ Cada asistente vertical usara el mismo patron de ARKOS pero con:
 - Permisos especificos
 - Dashboard adaptado
 - Reporte a ARKOS o capa INB LAB
+
