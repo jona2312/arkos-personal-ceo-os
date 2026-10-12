@@ -1,5 +1,13 @@
 # ARKOS Personal CEO OS — Arquitectura v2
 
+## Alcance de esta arquitectura
+
+Este documento describe la base asincrona WhatsApp/n8n/Supabase. La
+[propuesta descargable por cliente, archivo propio y voz live](ARKOS_DOWNLOADABLE_LIVE_VOICE_PROPOSAL.md)
+añade app PC/celular y agente local con permisos, preservando los contratos existentes.
+Es diseño pendiente de implementacion y validacion. La matriz de esa propuesta
+distingue esta base de los pilotos en PRs abiertos y de un producto distribuible.
+
 ## Tesis estrategica: De SaaS a GaaS / Agentic as a Service
 
 ARKOS se disena bajo una tesis estrategica: el software empresarial esta evolucionando desde SaaS hacia modelos agentic, donde el valor no esta solamente en ofrecer una herramienta, sino en entregar trabajo ejecutado por agentes.
@@ -135,7 +143,10 @@ Criterio de activacion de subagentes (todos deben cumplirse):
 
 ## Memoria persistente
 
-ARKOS no depende de memoria de sesion. Toda la memoria vive en Supabase.
+En el diseño cloud original, la memoria persistente vive en Supabase. Esto no
+describe la persistencia del chat de los pilotos desktop. La propuesta descargable
+plantea un archivo local durable, portable y propiedad del usuario, con sincronizacion
+opcional; no migra ni duplica memorias automaticamente.
 
 ### Tablas de memoria
 
@@ -277,3 +288,4 @@ La arquitectura de ARKOS es modular y replicable. Solo cambian:
 - Solo numeros autorizados pueden hablar con ARKOS
 - Logs de todas las acciones sensibles
 - Aprobacion humana para acciones externas
+
