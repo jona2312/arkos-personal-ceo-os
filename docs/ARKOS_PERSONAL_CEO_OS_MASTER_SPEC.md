@@ -1,5 +1,34 @@
 # ARKOS Personal CEO OS — Master Build Spec
 
+## Ampliacion de producto (2026-10-12)
+
+Esta spec conserva el MVP original WhatsApp/n8n/Supabase. La
+[propuesta de ARKOS descargable por cliente](ARKOS_DOWNLOADABLE_LIVE_VOICE_PROPOSAL.md)
+añade una direccion posterior: app propia PC/celular, voz en vivo, agente local con
+permisos y archivo durable del usuario en carpetas privadas por proyectos/temas.
+Cada cliente conserva identidad, memoria, dispositivos y cuentas separados.
+
+El archivo debe quedar en poder del usuario y poder exportarse completo al salir
+del servicio, incluso si eligio modelos cloud. Procesamiento, almacenamiento y
+sincronizacion son elecciones independientes; no se promete retencion eterna ni
+privacidad absoluta. Obsidian pasa a ser una vista opcional del archivo portable,
+manteniendo compatibilidad con el mirror existente hasta una migracion revisada.
+
+**Es una propuesta, no una implementacion.** Las exclusiones de streaming de voz,
+app movil nativa y multiempresa del MVP siguen vigentes para ese MVP. La nueva
+linea LV del [roadmap](ROADMAP.md) propone validarlas en etapas posteriores.
+Las fases COM posteriores proponen mensajes y llamadas app-a-app entre personas,
+con asistentes renombrables, contactos verificados y push minimo. Un envio ordinario
+explicitamente solicitado no necesita confirmaciones identicas repetidas; vincular
+dispositivos no vincula personas ni comparte su memoria. No habilita llamadas reales.
+La direccion de mensajeria personal/trabajo esta aprobada por Jona el 2026-10-12;
+la arquitectura, implementacion y PR requieren revision tecnica por separado.
+Ediciones gratuita/paga y packs por profesion son diseño comercial exploratorio:
+onboarding guiado de PC/celular, licencias y consumo externo separados, sin precios
+ni uso ilimitado comprometidos antes de medir costes.
+Consultar la matriz de evidencia de la propuesta: hay pilotos mas recientes en
+PRs abiertos, pero no un producto multi-cliente listo ni voz live aceptada.
+
 ## 1. Contexto general
 
 Estamos construyendo **ARKOS Personal CEO OS**, un asistente ejecutivo personal para Jona Romero, fundador de INB / INbig, pensado primero para uso personal y luego como base replicable para productos B2B, CRMs, asistentes ejecutivos para empresas y sistemas operativos conversacionales.
@@ -67,6 +96,9 @@ Respuesta por WhatsApp texto/audio
 
 ### Canal principal
 
+Alcance: canal principal del MVP asincrono. La app propia se propone como interfaz
+del producto descargable, conservando WhatsApp como canal opcional.
+
 | Entorno | Solucion |
 |---------|----------|
 | Produccion | WhatsApp Business Platform / Cloud API |
@@ -88,6 +120,11 @@ Respuesta por WhatsApp texto/audio
 
 ### Memoria
 
+La tabla siguiente describe la base cloud original. Para el producto descargable,
+el archivo local durable y portable se define en la propuesta; Supabase puede
+seguir como memoria operativa o sincronizacion autorizada, sin ser la unica copia
+de los registros del usuario. Persistencia conversacional local sigue pendiente.
+
 | Capa | Funcion |
 |------|---------|
 | Supabase | Memoria operativa estructurada |
@@ -99,6 +136,9 @@ Respuesta por WhatsApp texto/audio
 La memoria NO depende de sesiones temporales. ARKOS recuerda entre dias, semanas y meses.
 
 ### Voz
+
+Configuracion historica de audio por mensajes, no seleccion de proveedor para voz
+live. Modelos, condiciones y costos se verificaran antes de un ensayo real nuevo.
 
 | Campo | Valor |
 |-------|-------|
@@ -894,6 +934,11 @@ Objetivo: `ARKOS genera memoria visible en Markdown`
 - Decisions
 - Git sync opcional
 
+Para la linea descargable, organizar los registros propios por proyectos/temas,
+con Markdown/JSON y archivos originales, exportacion, copias y restauracion.
+Obsidian es una vista opcional; el archivo debe poder leerse sin ARKOS ni suscripcion.
+Detalles y limites en la propuesta enlazada al inicio.
+
 ---
 
 ## 17. Criterios de exito del MVP
@@ -945,3 +990,4 @@ Antes de produccion:
 ## 19. Frase rectora del proyecto
 
 > ARKOS no es un chatbot. Es un sistema operativo personal y ejecutivo con memoria persistente, WhatsApp como interfaz, voz conversacional, dashboard de control y reglas de aprobacion humana.
+
