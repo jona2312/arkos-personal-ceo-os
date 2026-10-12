@@ -138,6 +138,11 @@ El cliente puede tener una carpeta o repositorio privado para su configuración 
 documentos; **no necesita una cuenta Git ni un fork para usar el producto**. Un fork
 por sí solo no aísla memoria, sesiones, credenciales o procesos.
 
+El alta propuesta es **PC primero**: instalar ARKOS y crear allí el archivo privado
+principal; luego usar el celular como companion vinculado al mismo dueño. La cuenta
+y el alias del producto no dependen de GitHub. El celular conserva copias selectivas
+y acceso remoto según permisos, sin cambiar silenciosamente la autoridad del archivo.
+
 Requisitos antes de admitir clientes independientes:
 
 1. Identidad propia, dispositivos vinculados y revocables, sesión autenticada y
@@ -393,6 +398,22 @@ si B lo habilita, fallido o vencido. Aceptación del push no demuestra que B lo 
 Idempotencia por remitente/mensaje, deduplicación, expiración y consulta de estado;
 no reenvío automático de contenido incierto como mensaje nuevo.
 
+### Alternativa SMS opcional para quien no tiene la app
+
+App-a-app usa internet y datos, no SMS. Para un contacto sin ARKOS, el MVP Android
+puede ofrecer un SMS preparado: abrir la app de mensajes con `ACTION_SENDTO`, destino
+`smsto:` y texto; verificar que exista una app compatible. **La persona revisa,
+elige SIM si corresponde y pulsa Enviar.** Abrir el compositor no prueba envío ni
+entrega. Véase la [documentación oficial de intents Android](https://developer.android.com/guide/components/intents-common#Messaging).
+
+No solicitar envío automático `SEND_SMS` como requisito del MVP; cualquier futura
+automatización necesita elegibilidad de distribución, permisos de plataforma y
+revisión de la [política oficial de SMS/Call Log de Google Play](https://support.google.com/googleplay/android-developer/answer/10208820?hl=en).
+Validar cancelación, ausencia de SIM/app, multi-SIM y límites del operador. No
+prometer SMS gratuitos ni cuota ilimitada; pueden existir cargos, roaming o límites.
+No es un canal E2EE de ARKOS, ni un fallback automático que cambie el destinatario,
+la privacidad o el coste sin elección del usuario. No se envía ningún SMS aquí.
+
 ### Llamadas humanas app-a-app
 
 Invitación autenticada entre contactos autorizados, aceptación por el receptor y
@@ -408,6 +429,12 @@ compartible y autoridad específicos. Un contacto aceptado o mensaje humano no c
 a su asistente acceso a memoria, cuentas, archivos ni ejecución en la PC ajena.
 
 ### Arquitectura de comunicación propuesta
+
+Prioridad: infraestructura central mínima y uso de los dispositivos propios.
+Evaluar P2P en LAN o internet cuando sea viable; NAT, dispositivos offline, ejecución
+en segundo plano y entrega móvil impiden prometer conexión directa universal.
+Mantener solo lo necesario para directorio, rendezvous, push, cola cifrada y TURN
+cuando haga falta. No eliminar persistencia o seguridad para aparentar coste cero.
 
 | Pieza | Responsabilidad | Límite |
 |---|---|---|
@@ -524,14 +551,24 @@ la licencia del repositorio ni se compran servicios.
 1. Descargar el paquete verificado, elegir nombre del asistente y área privada.
 2. Ver requisitos, datos guardados y modo de procesamiento; crear un archivo vacío
    del cliente. La edición gratuita y la paga preservan el principio de portabilidad.
-3. Mostrar de inmediato «Vincular mi celular» con QR/enlace de emparejamiento seguro
-   y confirmación de los dispositivos. Ofrecer omitirlo; emparejar no instala todos
-   los conectores ni concede acceso a personas, micrófono o archivos por sí solo.
+3. **PC primero, luego celular:** la PC muestra «Vincular mi celular» con QR de un
+   solo uso y caducidad breve. Escanear abre instalación/apertura del companion
+   mediante enlace, tienda o onboarding web con reanudación; no instala una app
+   nativa silenciosamente. Tras autenticarse como el mismo dueño, mostrar aprobación
+   visible en la PC y el dispositivo que se vincula. El QR contiene un reto acotado,
+   nunca secretos duraderos ni rutas/archivos. Asignar ID y claves por dispositivo,
+   con revocación y recuperación. Emparejar no concede acceso a otras personas,
+   micrófono o todos los archivos por sí solo.
 4. Elegir paquetes y permisos mínimos. Separar claramente incluido, opcional y
    servicios externos que requieren cuenta, licencia o consumo aparte.
 5. Comprobar nota local, archivo guardado, notificación y estado de conexión con
    datos de prueba. Habilitar voz, tareas remotas o inicio automático solo según sus
    requisitos. Encendido remoto se ofrece únicamente cuando la compatibilidad se valide.
+
+Con PC offline, el celular puede leer lo ya descargado, recibir mensajes mediante
+push y dejar tareas pendientes; son tres capacidades distintas. No puede leer un
+archivo no sincronizado ni ejecutar una tarea de PC sin que vuelva el agente.
+El encendido remoto opcional requiere una ruta compatible y no se promete a todos.
 
 ### Paquetes modulares por profesión
 
