@@ -6,6 +6,30 @@ ARKOS es un sistema operativo ejecutivo basado en agentes con memoria persistent
 
 Construido bajo la tesis de transicion de SaaS a Agentic as a Service (GaaS): el valor no esta en la herramienta, sino en el trabajo ejecutado por el agente.
 
+## Direccion de producto: un ARKOS propio por cliente
+
+La [propuesta de ARKOS descargable, voz en vivo y PC privada](docs/ARKOS_DOWNLOADABLE_LIVE_VOICE_PROPOSAL.md)
+amplia el producto hacia una app propia en PC/celular, un agente local con permisos
+explicitos y un archivo durable del usuario en carpetas privadas por proyecto/tema.
+El archivo debe ser portable y exportable al dejar el servicio, tambien cuando se
+elija procesamiento cloud. Incluye modos local, hibrido y cloud con flujos de datos,
+consentimiento, aislamiento por cliente y pruebas de fiabilidad pendientes.
+Como fase posterior propone mensajes y llamadas app-a-app entre personas a traves
+de asistentes con nombre propio, contactos verificados y notificaciones en celular
+aunque la PC este apagada. No hay mensajeria ni llamadas nativas implementadas aqui.
+La direccion de producto de un espacio propio de mensajeria personal/trabajo fue
+aprobada por Jona el 2026-10-12; no implica aprobacion tecnica, merge ni despliegue.
+Tambien recoge como diseño exploratorio ediciones gratuita/paga, onboarding de
+vinculacion y packs por profesion. Precios, licencias incluidas y costes por usuario
+siguen pendientes de medicion y decision.
+
+**Estado: propuesta, no funcionalidad entregada.** Hay pilotos mas recientes en
+PRs abiertos (desktop, relay, chat y Cloud con proveedor falso); la propuesta
+identifica sus avances y limites. Esta rama conserva abajo la base asíncrona
+WhatsApp/n8n/Supabase. El archivo local, la voz live y la distribucion comercial
+requieren implementacion y aceptacion; una PC privada no implica procesamiento
+100 % local si se usan proveedores cloud.
+
 ---
 
 ## Arquitectura
@@ -62,6 +86,7 @@ arkos-personal-ceo-os/
     ROADMAP.md               # Roadmap por fases
     CHECKLIST_FASE_1.md      # Checklist operativo Fase 1
     ARKOS_PERSONAL_CEO_OS_MASTER_SPEC.md  # Spec completa
+    ARKOS_DOWNLOADABLE_LIVE_VOICE_PROPOSAL.md  # Propuesta de producto local-first
   supabase/
     migrations/
       001_init_users.sql
@@ -131,15 +156,20 @@ ARKOS requiere aprobacion explicita para:
 | [MIGRATION_TO_ARKOS_CORE_API.md](docs/MIGRATION_TO_ARKOS_CORE_API.md) | Tool contracts para migracion futura |
 | [WHATSAPP_CLOUD_API_SETUP.md](docs/WHATSAPP_CLOUD_API_SETUP.md) | Setup WhatsApp Cloud API en Meta |
 | [ROADMAP.md](docs/ROADMAP.md) | Roadmap Fases 0-8 |
+| [ARKOS_DOWNLOADABLE_LIVE_VOICE_PROPOSAL.md](docs/ARKOS_DOWNLOADABLE_LIVE_VOICE_PROPOSAL.md) | App por cliente, archivo propio, voz live, permisos PC y validacion propuesta |
 
 ---
 
 ## Estado actual
 
-Fase 1 en deploy. Schema, workflows y documentacion completos.
+En `main` hay schema, workflows y documentacion de la base WhatsApp/n8n/Supabase.
+El roadmap historico conserva Fase 1 en deploy con pasos pendientes; la presencia
+de archivos no acredita despliegue ni funcionamiento actual. Los pilotos posteriores
+siguen en PRs abiertos, segun la matriz de estado de la propuesta del 2026-10-12.
 
 ---
 
 ## Licencia
 
 Proyecto privado. Jona Romero / INB.
+
