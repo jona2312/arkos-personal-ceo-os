@@ -65,3 +65,22 @@ Incluyen requisitos manuales, diagnóstico, inicio, cierre, retirada y segunda P
 La aceptación en una segunda PC, modelos reales y velocidad siguen pendientes.
 No confundir los tests sintéticos con una conversación real ni con certificación
 de todas las versiones Windows/PowerShell. No se activa Cloud real.
+
+## Evidencia local
+
+- Suite completa: 233 tests, 211 PASS, 22 SKIP (SDK Cloud, OpenSSL o Hermes
+  no disponibles), cero FAIL. No se instalaron dependencias para cambiar skips.
+- `node scripts/Test-ArkosNeural.cjs` y `node scripts/Test-ArkosRemoteView.cjs`:
+  PASS, incluidos los nueve estados remotos.
+- `Test-ArkosLauncherEnvironment.ps1 -PythonPath <Python existente>`:
+  12 PASS en PowerShell 7.6.5. Sobre el paquete extraído, Windows PowerShell
+  5.1.26100.9549: 8 PASS; variante de entorno vacío omitida porque ese runtime
+  no puede conservarla. Ninguna ejecución CheckOnly creó estado.
+- `test_windows_package.py`: PASS; dos construcciones idénticas, hashes de
+  contenido/manifiesto/ZIP y suites launcher, task center y chat sintético
+  ejecutadas desde la copia extraída, sin importar módulos del checkout.
+- `git diff --check`: PASS. No hay evidencia de segunda PC ni modelos reales.
+
+El SHA final y los resultados CI se registran en el PR para no insertar una
+referencia circular al propio commit dentro del paquete. El manifiesto generado
+contiene el SHA exacto de su fuente.
