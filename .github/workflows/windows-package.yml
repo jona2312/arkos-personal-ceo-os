@@ -37,3 +37,21 @@ jobs:
           path: dist/*
           if-no-files-found: error
           retention-days: 30
+  compare:
+    needs: package
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: arkos-windows-pilot-*
+          path: artifacts
+      - name: Linux and Windows archives must be identical
+        shell: python
+        run: |
+          import hashlib
+          from pathlib import Path
+          files = list(Path('artifacts').rglob('*.zip'))
+          assert len(files) == 2, 'Expected one archive per platform'
+          hashes = {hashlib.sha256(p.read_bytes()).hexdigest() for p in files}
+          assert len(hashes) == 1, 'Cross-platform archive mismatch'
+          print('PASS cross-platform SHA-256:', hashes.pop())

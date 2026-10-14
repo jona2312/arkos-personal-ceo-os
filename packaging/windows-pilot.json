@@ -55,7 +55,6 @@
     "arkos_pilot/web/neural.js",
     "arkos_pilot/web/remote-view.js",
     "arkos_pilot/web/style.css",
-    "docs/task-center/GUIDED_LAUNCHER.md",
     "PILOT-WINDOWS.md",
     "scripts/Get-ArkosDesktopReadiness.ps1",
     "scripts/Open-Arkos.ps1"
