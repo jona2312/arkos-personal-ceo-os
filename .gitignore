@@ -37,3 +37,7 @@ __pycache__/
 n8n/workflows/deploy/
 .arkos-relay/
 *.sqlite3
+
+# Configuraciones reales del gateway y la PC (se crean desde los *.example.json; nunca al repo)
+config/cloud-gateway.json
+config/cloud-client.json

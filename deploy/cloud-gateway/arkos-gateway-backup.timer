@@ -1,0 +1,11 @@
+# Plantilla, NO habilitada. Activar solo con aprobación: systemctl enable --now arkos-gateway-backup.timer
+[Unit]
+Description=Copia diaria del ledger del gateway ARKOS
+
+[Timer]
+OnCalendar=*-*-* 03:17:00 UTC
+Persistent=true
+RandomizedDelaySec=300
+
+[Install]
+WantedBy=timers.target

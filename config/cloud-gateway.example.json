@@ -1,10 +1,13 @@
 {
   "disclosure": {
-    "policy_version": "2026-10-11-pilot",
+    "policy_version": "2026-10-14-pilot",
     "provider": "anthropic",
     "model": "claude-haiku-5-5",
     "region": "global",
     "provider_retention_days": 30,
+    "provider_flagged_retention_days": 730,
+    "provider_trains_on_data": false,
+    "provider_storage_region": "us",
     "gateway_retention_hours": 0,
     "max_input_chars": 12000,
     "max_output_tokens": 2048,

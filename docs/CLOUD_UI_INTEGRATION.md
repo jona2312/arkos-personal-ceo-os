@@ -87,6 +87,9 @@ variable de entorno, no de un argumento.
 
 ## Pendiente antes de un proveedor real
 
+Ver `docs/CLOUD_PILOT_REAL.md` (condiciones verificadas, hosting y prueba mínima).
+
+
 Verificar la retención y las condiciones del proveedor (`terms_verified`), el hosting de una
 sola instancia con backups, TLS del dominio y una clave de workspace dedicado con su propio
 límite. Luego, un PR que solo cambie `terms_verified` y la URL, con revisión humana.

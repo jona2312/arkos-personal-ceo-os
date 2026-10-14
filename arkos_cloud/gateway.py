@@ -93,13 +93,14 @@ def utc_day(now=None):
 
 
 class CloudGateway:
-    def __init__(self, config, ledger_path, provider, token_hashes=None, clock=time.time):
+    def __init__(self, config, ledger_path, provider, token_hashes=None, clock=time.time, terms_digest=None):
         """token_hashes: optional {sha256(akc_ token): user_id} to register (persisted, hash only).
 
         Tokens live in the ledger and are checked on every request, so revoking one with
         Ledger.revoke_token (operator CLI) takes effect without a restart.
         """
         self.config, self.provider, self.clock = config, provider, clock
+        self.terms_digest = terms_digest  # sha256 of the terms record the operator started with
         self._instance = InstanceLock(ledger_path)
         try:
             self.ledger = Ledger(ledger_path)
@@ -253,7 +254,7 @@ class CloudGateway:
     def status(self):
         """What the PC must check before activation: same disclosure, and test vs real provider."""
         return {"disclosure_digest": self.config.disclosure.digest(), "disclosure": self.config.disclosure.as_dict(),
-                "provider_mode": self.provider_mode}
+                "provider_mode": self.provider_mode, "terms_digest": self.terms_digest}
 
     def cancel(self, user, rid):
         row = self.ledger.request_cancel(user, rid, day=utc_day(self.clock()))

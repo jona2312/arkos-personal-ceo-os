@@ -1,6 +1,6 @@
 # Propuesta de despliegue: ARKOS Cloud (conversación de texto)
 
-Estado: **propuesta, no ejecutada**. Revisión de preparación: `docs/CLOUD_STAGING_REVIEW.md`. Nada de esto se desplegó ni se configuró. Requiere
+Estado: **propuesta, no ejecutada**. Versión operativa y condiciones verificadas: `docs/CLOUD_PILOT_REAL.md`. Revisión de preparación: `docs/CLOUD_STAGING_REVIEW.md`. Nada de esto se desplegó ni se configuró. Requiere
 aprobación explícita de Jona en cada fase. Lo financiero es estimativo y educativo.
 
 ## 1. Decisiones que hay que aprobar antes de escribir código productivo

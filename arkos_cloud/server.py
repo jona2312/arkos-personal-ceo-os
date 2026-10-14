@@ -117,8 +117,20 @@ class _Handler(BaseHTTPRequestHandler):
         except OSError:
             return
 
+    def _client_ip(self):
+        """Behind a local TLS proxy every peer is the proxy: use the address it appended last."""
+        peer = self.client_address[0]
+        if self.server.trusted_proxy and peer == self.server.trusted_proxy:
+            forwarded = self.headers.get("X-Forwarded-For", "")
+            last = forwarded.split(",")[-1].strip() if forwarded else ""
+            try:
+                return str(ipaddress.ip_address(last))
+            except ValueError:
+                return peer
+        return peer
+
     def _handle(self):
-        if not self.server.limiter.allow(self.client_address[0]):
+        if not self.server.limiter.allow(self._client_ip()):
             return self._send(429, {"error": {"code": "rate_limited"}})
         body = b""
         if self.command == "POST":
@@ -154,13 +166,16 @@ class GatewayServer(ThreadingHTTPServer):
     daemon_threads = True
 
     def __init__(self, gateway, host="127.0.0.1", port=0, tls_cert=None, tls_key=None,
-                 behind_tls_proxy=False, access_log=sys.stderr, rate_limit=RATE_LIMIT):
+                 behind_tls_proxy=False, access_log=sys.stderr, rate_limit=RATE_LIMIT, trusted_proxy=None):
         if bool(tls_cert) != bool(tls_key):
             raise ValueError("TLS requiere certificado y clave")
         if not is_loopback(host) and not tls_cert and not behind_tls_proxy:
             raise ValueError("Fuera de loopback se requiere TLS o --behind-tls-proxy explícito")
         super().__init__((host, port), _Handler)
         self.gateway, self.access_log = gateway, access_log
+        if trusted_proxy is not None and not is_loopback(trusted_proxy):
+            raise ValueError("Solo se confía en un proxy TLS local (loopback)")
+        self.trusted_proxy = trusted_proxy
         self.limiter = _RateLimiter(rate_limit, RATE_WINDOW_S)
         self.scheme = "https" if tls_cert else "http"
         if tls_cert:

@@ -414,6 +414,36 @@ class HttpWithoutSdkTests(unittest.TestCase):
         self.assertEqual(self.gateway.ledger.get("user-a", "e2e-req-0002")["state"], "cancelled")
         self.assertEqual(len(self.provider.calls), 2)
 
+    def test_real_smoke_script_refuses_test_gateways_and_reports_no_content(self):
+        url = self.serve()
+        cfg = self.tmp / 'client.json'
+        data = json.loads(json.dumps(self.config.__dict__, default=lambda o: o.__dict__))
+        data['gateway_url'] = url
+        cfg.write_text(json.dumps(data), encoding='utf-8')
+        env = dict(os.environ, ARKOS_CLOUD_DEVICE_TOKEN=TOKEN_A)
+        state = self.tmp / 'smoke'
+        base = [sys.executable, '-B', 'scripts/Run-ArkosCloudRealSmoke.py', '--state-dir', str(state),
+                '--cloud-config', str(cfg), '--report', str(self.tmp / 'r.json')]
+        no_flag = subprocess.run(base, cwd=ROOT, env=env, capture_output=True, text=True, timeout=60)
+        self.assertNotEqual(no_flag.returncode, 0)
+        no_consent = subprocess.run(base + ['--confirm-paid-calls'], cwd=ROOT, env=env, capture_output=True, text=True, timeout=60)
+        self.assertEqual(no_consent.returncode, 2, no_consent.stdout + no_consent.stderr)
+        ConsentStore(state / 'cloud').grant(self.config.disclosure, self.config.disclosure.digest()[:CONFIRM_CHARS])
+        test_gateway = subprocess.run(base + ['--confirm-paid-calls'], cwd=ROOT, env=env, capture_output=True, text=True, timeout=60)
+        self.assertEqual(test_gateway.returncode, 2, test_gateway.stdout)
+        self.assertIn('proveedor de prueba', json.loads((self.tmp / 'r.json').read_text(encoding='utf-8'))['aborted'])
+        self.assertEqual(self.provider.calls, [])  # nothing sent before preconditions
+        ok = subprocess.run(base + ['--confirm-paid-calls', '--allow-test-gateway', '--turns', '2'], cwd=ROOT, env=env,
+                            capture_output=True, text=True, timeout=120)
+        self.assertEqual(ok.returncode, 0, ok.stdout + ok.stderr)
+        report = json.loads((self.tmp / 'r.json').read_text(encoding='utf-8'))
+        self.assertEqual([t['state'] for t in report['turns']], ['ok', 'ok'])
+        self.assertEqual(len(self.provider.calls), 2)
+        self.assertEqual([len(c['messages']) for c in self.provider.calls], [1, 3])
+        raw = (self.tmp / 'r.json').read_text(encoding='utf-8')
+        self.assertNotIn('presupuesto del piloto', raw)
+        self.assertNotIn(TOKEN_A, raw + ok.stdout + ok.stderr)
+
     def test_tls_verification(self):
         import shutil
         if not shutil.which("openssl"):
