@@ -1,0 +1,12 @@
+# Copia diaria del ledger — plantilla, NO habilitada.
+[Unit]
+Description=ARKOS Cloud gateway: copia consistente del ledger
+
+[Service]
+Type=oneshot
+DynamicUser=yes
+StateDirectory=arkos-gateway
+WorkingDirectory=/opt/arkos
+UMask=0077
+ExecStart=/opt/arkos/.venv/bin/python -B -m arkos_cloud backup \
+  --ledger /var/lib/arkos-gateway/ledger.sqlite3 --out /var/lib/arkos-gateway/backups --keep 14

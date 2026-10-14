@@ -47,7 +47,7 @@ async function main(){
   await page.getByRole('radio',{name:'Cloud',exact:true}).click();
   await page.locator('#cloud-consent').waitFor();
   const terms=await page.locator('#cloud-terms').textContent();
-  for(const expected of ['anthropic · claude-haiku-5-5','PRUEBA con proveedor falso','Qué se envía','0 h','SIN VERIFICAR','USD 0.20 por usuario por día','USD 1.00 global por día','USD 10.00 global por mes','puede cobrarse igual','Nunca automáticos'])
+  for(const expected of ['anthropic · claude-haiku-5-5','PRUEBA con proveedor falso','Qué se envía','0 h','SIN VERIFICAR','USD 0.20 por usuario por día','USD 1.00 global por día','USD 10.00 global por mes','puede cobrarse igual','Nunca automáticos','730 días','no entrena modelos','almacenamiento del proveedor: US','Fuentes oficiales revisadas el 2026-10-14','Solo prueba'])
     assert.ok(terms.includes(expected),'consent terms missing: '+expected);
   assert.equal(await page.locator('#chat-input').isDisabled(),true);
   assert.equal(await page.locator('#cloud-accept').isDisabled(),true);

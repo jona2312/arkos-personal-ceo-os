@@ -1,0 +1,42 @@
+# ARKOS Cloud gateway — plantilla, NO habilitada. Instalar solo con aprobación (ver docs/CLOUD_PILOT_REAL.md).
+# La clave del proveedor llega como credencial de systemd: nunca en el entorno, el repo ni la línea de comandos.
+[Unit]
+Description=ARKOS Cloud gateway (una sola instancia por ledger)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+DynamicUser=yes
+StateDirectory=arkos-gateway
+StateDirectoryMode=0700
+WorkingDirectory=/opt/arkos
+LoadCredential=provider_key:/etc/arkos/provider_key
+Environment=ARKOS_CLOUD_PROVIDER_KEY_FILE=%d/provider_key
+Environment=PYTHONDONTWRITEBYTECODE=1
+ExecStart=/opt/arkos/.venv/bin/python -B -m arkos_cloud serve \
+  --gateway-config /opt/arkos/config/cloud-gateway.json \
+  --terms-record /opt/arkos/config/cloud-terms-record.json \
+  --ledger /var/lib/arkos-gateway/ledger.sqlite3 \
+  --host 127.0.0.1 --port 8787 --trusted-proxy 127.0.0.1
+Restart=on-failure
+RestartSec=5
+# Endurecimiento
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+RestrictNamespaces=yes
+LockPersonality=yes
+MemoryDenyWriteExecute=yes
+SystemCallArchitectures=native
+CapabilityBoundingSet=
+UMask=0077
+
+[Install]
+WantedBy=multi-user.target

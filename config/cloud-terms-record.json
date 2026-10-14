@@ -1,0 +1,164 @@
+{
+  "schema": "arkos.cloud.terms/1",
+  "provider": "anthropic",
+  "endpoint": "https://api.anthropic.com/v1/messages (Claude API de primera parte, Anthropic como procesador)",
+  "model": "claude-haiku-5-5",
+  "reviewed_on": "2026-10-14",
+  "reviewed_by": "Claude (asistente) — requiere revisión y firma humana; no vale como verificación por sí solo",
+  "valid_until": "2027-01-12",
+  "declared": {
+    "provider": "anthropic",
+    "model": "claude-haiku-5-5",
+    "inference_geo": "global",
+    "retention_days_max": 30,
+    "flagged_retention_days_max": 730,
+    "trains_on_customer_content": false,
+    "storage_region": "us"
+  },
+  "public_sources": [
+    {
+      "id": "S1",
+      "title": "API and data retention",
+      "url": "https://platform.claude.com/docs/en/manage-claude/api-and-data-retention",
+      "retrieved_on": "2026-10-14",
+      "page_date": null,
+      "read_directly": true,
+      "scope": "public",
+      "supports": ["flagged_retention_days_max", "trains_on_customer_content"],
+      "excerpt": [
+        "Retained data is never used for model training without your express permission.",
+        "Conversation content (your prompts and Claude's outputs) is not retained by default; the exception is Covered Models, which require 30-day retention.",
+        "Even with ZDR or HIPAA arrangements in place, Anthropic may retain data where required by law or where it has been flagged by Anthropic's automated trust and safety systems. As a result, if a chat or session is flagged, Anthropic may retain inputs and outputs for up to 2 years.",
+        "To request ZDR for your organization, contact the Anthropic sales team. ZDR is enabled per organization."
+      ]
+    },
+    {
+      "id": "S2",
+      "title": "Covered Models",
+      "url": "https://support.claude.com/en/articles/15425695-covered-models",
+      "retrieved_on": "2026-10-14",
+      "page_date": "2026-09-01",
+      "read_directly": true,
+      "scope": "public",
+      "supports": ["model"],
+      "excerpt": [
+        "Covered Models: Claude Mythos 5.1, Claude Fable 5.1, Claude Mythos 5, Claude Fable 5 (30-day minimum retention, no standard ZDR).",
+        "These policies apply only to the models listed on this page. Claude Haiku 5.5 is not listed."
+      ]
+    },
+    {
+      "id": "S3",
+      "title": "How long do you store my organization's data? (Privacy Center, productos comerciales)",
+      "url": "https://privacy.claude.com/en/articles/7996866-how-long-do-you-store-my-organization-s-data",
+      "retrieved_on": "2026-10-14",
+      "page_date": null,
+      "read_directly": false,
+      "scope": "public",
+      "supports": ["retention_days_max", "flagged_retention_days_max"],
+      "excerpt": [
+        "Contenido conocido solo por el índice del buscador; la lectura directa fue bloqueada por la política de red del entorno de trabajo.",
+        "Según el índice: inputs y outputs se borran del backend dentro de 30 días, salvo servicios con retención bajo control del cliente (p. ej. Files API), acuerdos distintos (p. ej. ZDR), cumplimiento de la Usage Policy o la ley; contenido marcado: hasta 2 años; puntajes de clasificación de seguridad: hasta 7 años; feedback: 5 años."
+      ]
+    },
+    {
+      "id": "S4",
+      "title": "Commercial Terms of Service",
+      "url": "https://www.anthropic.com/legal/commercial-terms",
+      "retrieved_on": "2026-10-14",
+      "page_date": null,
+      "read_directly": true,
+      "scope": "public (aplica al aceptar los Términos Comerciales)",
+      "supports": ["trains_on_customer_content", "provider"],
+      "excerpt": [
+        "Anthropic may not train models on Customer Content from Services.",
+        "Data submitted through the Services will be processed in accordance with the Anthropic Data Processing Addendum."
+      ]
+    },
+    {
+      "id": "S5",
+      "title": "Data residency",
+      "url": "https://platform.claude.com/docs/en/manage-claude/data-residency",
+      "retrieved_on": "2026-10-14",
+      "page_date": null,
+      "read_directly": true,
+      "scope": "public; la configuración efectiva del workspace es de cuenta (A3)",
+      "supports": ["inference_geo", "storage_region"],
+      "excerpt": [
+        "\"global\": Default. Inference may run in any available geography for optimal performance and availability. \"us\": Inference runs only in US-based infrastructure.",
+        "The inference_geo parameter is supported on Claude 4.6 and later models.",
+        "Workspace geo is set when you create a workspace and can't be changed afterward. Currently, \"us\" is the only available workspace geo.",
+        "US-only inference (inference_geo: \"us\") is priced at 1.1x the standard rate."
+      ]
+    },
+    {
+      "id": "S6",
+      "title": "Models overview",
+      "url": "https://platform.claude.com/docs/en/about-claude/models/overview.md",
+      "retrieved_on": "2026-10-14",
+      "page_date": null,
+      "read_directly": true,
+      "scope": "public",
+      "supports": ["model", "provider"],
+      "excerpt": [
+        "Claude Haiku 5.5 — Claude API ID claude-haiku-5-5 — Retirement: Not sooner than October 7, 2027."
+      ]
+    },
+    {
+      "id": "S7",
+      "title": "Supported regions",
+      "url": "https://platform.claude.com/docs/en/api/supported-regions",
+      "retrieved_on": "2026-10-14",
+      "page_date": null,
+      "read_directly": true,
+      "scope": "public",
+      "supports": [],
+      "excerpt": ["Here are the countries, regions, and territories we can currently support access from: ... Argentina ..."]
+    },
+    {
+      "id": "S8",
+      "title": "How do I view and sign your Data Processing Addendum (DPA)?",
+      "url": "https://support.claude.com/en/articles/7996862-i-am-a-commercial-customer-how-do-i-view-your-data-processing-addendum-dpa",
+      "retrieved_on": "2026-10-14",
+      "page_date": "2026-03-16",
+      "read_directly": true,
+      "scope": "public",
+      "supports": [],
+      "excerpt": ["The DPA, which includes Standard Contractual Clauses, is automatically incorporated into our Commercial Terms of Service. When you accept Anthropic's Commercial Terms of Service, you also accept our DPA."]
+    },
+    {
+      "id": "S9",
+      "title": "Pricing",
+      "url": "https://platform.claude.com/docs/en/about-claude/pricing.md",
+      "retrieved_on": "2026-10-11",
+      "page_date": null,
+      "read_directly": true,
+      "scope": "public",
+      "supports": [],
+      "excerpt": ["Claude Haiku 5.5 (for prompts up to 100,000 tokens): $0.10 / MTok input, $0.50 / MTok output; over 100,000 tokens: $0.50 / $2.50."]
+    }
+  ],
+  "account_checks": [
+    {"id": "A1", "item": "La organización opera bajo los Términos Comerciales (cuenta de API, no consumidor) y los aceptó", "how_to_verify": "Console > Settings > Organization: tipo de cuenta y términos aceptados", "status": "pending", "evidence": null, "confirmed_by": null, "confirmed_on": null},
+    {"id": "A2", "item": "Retención del workspace: estándar, sin ZDR ni acuerdo distinto (confirma el tope de 30 días declarado)", "how_to_verify": "Console > Settings > Data retention del workspace del piloto", "status": "pending", "evidence": null, "confirmed_by": null, "confirmed_on": null},
+    {"id": "A3", "item": "Workspace geo = us; allowed_inference_geos incluye \"global\"; default_inference_geo coherente", "how_to_verify": "Console > Settings > Workspaces > Data residency del workspace del piloto", "status": "pending", "evidence": null, "confirmed_by": null, "confirmed_on": null},
+    {"id": "A4", "item": "Ningún programa opcional que habilite usar datos para entrenamiento o feedback (p. ej. programas de socios de desarrollo)", "how_to_verify": "Console > Settings > Privacy / programas aceptados por la organización", "status": "pending", "evidence": null, "confirmed_by": null, "confirmed_on": null},
+    {"id": "A5", "item": "claude-haiku-5-5 habilitado para el workspace y límites de tasa suficientes", "how_to_verify": "Console > Limits; en el paso de prueba, GET /v1/models/claude-haiku-5-5 (sin tokens) con la clave del workspace", "status": "pending", "evidence": null, "confirmed_by": null, "confirmed_on": null},
+    {"id": "A6", "item": "Límite de gasto del workspace configurado en USD 10 por mes o menos", "how_to_verify": "Console > Limits / Billing del workspace del piloto", "status": "pending", "evidence": null, "confirmed_by": null, "confirmed_on": null},
+    {"id": "A7", "item": "Entidad y país de facturación admitidos (Argentina figura en S7) e impuestos aplicables", "how_to_verify": "Console > Billing", "status": "pending", "evidence": null, "confirmed_by": null, "confirmed_on": null},
+    {"id": "A8", "item": "Uso previsto (asistente personal, notas) dentro de la Usage Policy", "how_to_verify": "Revisión humana de https://www.anthropic.com/legal/aup frente al caso de uso", "status": "pending", "evidence": null, "confirmed_by": null, "confirmed_on": null},
+    {"id": "A9", "item": "Lista de subprocesadores revisada en el Trust Center", "how_to_verify": "https://trust.anthropic.com > Subprocessors", "status": "pending", "evidence": null, "confirmed_by": null, "confirmed_on": null}
+  ],
+  "discrepancies": [
+    {
+      "id": "D1",
+      "summary": "S1 (docs de plataforma) dice que el contenido de conversación no se retiene por defecto salvo Covered Models; S3 (Privacy Center, vía índice) dice que se borra dentro de 30 días.",
+      "handling": "Se declara el tope conservador de 30 días en el consentimiento hasta resolverlo con A2 o con la cuenta.",
+      "status": "open"
+    }
+  ],
+  "not_claimed": [
+    "ZDR: no se declara; requiere acuerdo con ventas/cuenta (S1).",
+    "HIPAA: no aplica al piloto.",
+    "Inferencia solo en EE. UU.: no se declara; el piloto usa \"global\" (S5)."
+  ]
+}
