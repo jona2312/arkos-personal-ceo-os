@@ -1,0 +1,39 @@
+name: Windows pilot package
+on:
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  package:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Build twice, verify hashes and exercise extracted package
+        run: python -B -m unittest discover -s tests -p test_windows_package.py -v
+      - name: Build artifact from exact PR HEAD
+        run: python -B scripts/Build-ArkosPackage.py --output dist
+      - name: Extract and check real Windows launcher
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $unpacked = Join-Path $env:RUNNER_TEMP 'ARKOS paquete ñ'
+          Expand-Archive -LiteralPath (Get-ChildItem dist/*.zip).FullName -DestinationPath $unpacked
+          $state = Join-Path $env:RUNNER_TEMP 'arkos-packaged-state'
+          & "$unpacked/scripts/Open-Arkos.ps1" -PythonPath (Get-Command python).Source -StateDirectory $state -CheckOnly
+          if ($LASTEXITCODE -ne 0 -or (Test-Path $state)) { throw 'Packaged preflight failed or wrote state' }
+          Copy-Item scripts/Test-ArkosLauncherEnvironment.ps1 "$unpacked/scripts/"
+          & "$unpacked/scripts/Test-ArkosLauncherEnvironment.ps1" -PythonPath (Get-Command python).Source
+      - uses: actions/upload-artifact@v4
+        with:
+          name: arkos-windows-pilot-${{ matrix.os }}-${{ github.event.pull_request.head.sha }}
+          path: dist/*
+          if-no-files-found: error
+          retention-days: 30
