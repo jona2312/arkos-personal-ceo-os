@@ -1,0 +1,62 @@
+{
+  "version": "0.1.0-pilot",
+  "dependencies": [
+    {
+      "name": "Python",
+      "requirement": "3.11+ with sqlite3; installed manually",
+      "bundled": false
+    },
+    {
+      "name": "PowerShell",
+      "requirement": "Windows PowerShell 5.1 or PowerShell 7; launcher",
+      "bundled": false
+    },
+    {
+      "name": "Browser",
+      "requirement": "Modern browser, supplied by user",
+      "bundled": false
+    },
+    {
+      "name": "FFmpeg",
+      "requirement": "Optional, clips only; manual",
+      "bundled": false
+    }
+  ],
+  "files": [
+    "arkos_cloud/__init__.py",
+    "arkos_cloud/__main__.py",
+    "arkos_cloud/adapter.py",
+    "arkos_cloud/config.py",
+    "arkos_cloud/consent.py",
+    "arkos_cloud/gateway.py",
+    "arkos_cloud/http_transport.py",
+    "arkos_cloud/ledger.py",
+    "arkos_cloud/provider_anthropic.py",
+    "arkos_cloud/server.py",
+    "arkos_hermes/__init__.py",
+    "arkos_hermes/__main__.py",
+    "arkos_hermes/bridge.py",
+    "arkos_hermes/contract.py",
+    "arkos_hermes/runner.py",
+    "arkos_pilot/__init__.py",
+    "arkos_pilot/__main__.py",
+    "arkos_pilot/catalog.py",
+    "arkos_pilot/chat.py",
+    "arkos_pilot/cloud_link.py",
+    "arkos_pilot/core.py",
+    "arkos_pilot/launcher.py",
+    "arkos_pilot/providers.py",
+    "arkos_pilot/relay_snapshot.py",
+    "arkos_pilot/task_center.py",
+    "arkos_pilot/web/app.js",
+    "arkos_pilot/web/chat.js",
+    "arkos_pilot/web/index.html",
+    "arkos_pilot/web/mark.svg",
+    "arkos_pilot/web/neural.js",
+    "arkos_pilot/web/remote-view.js",
+    "arkos_pilot/web/style.css",
+    "PILOT-WINDOWS.md",
+    "scripts/Get-ArkosDesktopReadiness.ps1",
+    "scripts/Open-Arkos.ps1"
+  ]
+}

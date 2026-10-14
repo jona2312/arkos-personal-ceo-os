@@ -10,6 +10,9 @@ import sys
 
 from .relay_snapshot import DEVICE, read_view
 
+# Operational reserve for the trial queue, not a model requirement or capacity guarantee.
+STATE_RESERVE_BYTES = 100 * 1024 * 1024
+
 
 def default_state():
     if sys.platform == 'win32' and os.environ.get('LOCALAPPDATA'):
@@ -47,6 +50,14 @@ def preflight(state_dir, port=0, relay_snapshot=None, relay_device_id=None):
     except OSError:
         safe = False
     check('state', safe, 'Elegí una carpeta de prueba escribible; no usar archivos, enlaces ni la instalación existente.')
+    free_bytes = None
+    if safe:
+        try:
+            free_bytes = shutil.disk_usage(parent).free
+        except OSError:
+            pass
+    check('disk_space', free_bytes is not None and free_bytes >= STATE_RESERVE_BYTES,
+          'Se requieren 100 MiB libres como reserva operativa de la prueba; no estima espacio para modelos o archivos futuros.')
     port_ok = type(port) is int and 0 <= port <= 65535
     if port_ok:
         try:
@@ -68,7 +79,8 @@ def preflight(state_dir, port=0, relay_snapshot=None, relay_device_id=None):
         warnings.append('FFmpeg no está en PATH: notas disponibles, recortes pendientes. No se descarga ni instala automáticamente.')
     return dict(ready=all(c['ok'] for c in checks), checks=checks, warnings=warnings,
                 capabilities=dict(notes=sqlite_ok, clips=ffmpeg, hermes_chat=False, voice=False),
-                python_version='.'.join(map(str, sys.version_info[:3])))
+                python_version='.'.join(map(str, sys.version_info[:3])),
+                storage=dict(free_bytes=free_bytes, reserve_bytes=STATE_RESERVE_BYTES))
 
 
 def main(argv=None):

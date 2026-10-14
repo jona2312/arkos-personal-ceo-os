@@ -7,6 +7,9 @@ con aprobación humana. Proyecto de INPiensa / INB, impulsado por Jona Romero.
 de aceptación. La interfaz se ha probado con respuestas sintéticas; la conexión
 Hermes/Qwen real del centro de tareas sigue pendiente de aceptación en la PC.
 
+Paquete Windows del piloto (requiere Python existente, sin instalación automática):
+[uso y aceptación](PILOT-WINDOWS.md) · [construcción reproducible y CI](docs/task-center/WINDOWS_PACKAGE.md).
+
 ## Qué está implementado
 
 - Centro de tareas responsive: notas y recortes de video, revisión, aprobación

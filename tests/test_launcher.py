@@ -41,6 +41,19 @@ class LauncherTests(unittest.TestCase):
             self.assertFalse(preflight(self.root, port)['ready'])
         self.assertFalse(self.root.exists())
 
+    def test_insufficient_or_unknown_disk_space_blocks_without_writes(self):
+        from types import SimpleNamespace
+        for free in (0, 100 * 1024 * 1024 - 1):
+            with patch('arkos_pilot.launcher.shutil.disk_usage', return_value=SimpleNamespace(free=free)):
+                report = preflight(self.root)
+            self.assertFalse(report['ready'])
+            self.assertEqual(report['storage']['free_bytes'], free)
+        with patch('arkos_pilot.launcher.shutil.disk_usage', side_effect=OSError):
+            self.assertFalse(preflight(self.root)['ready'])
+        with patch('arkos_pilot.launcher.shutil.disk_usage', return_value=SimpleNamespace(free=100 * 1024 * 1024)):
+            self.assertTrue(preflight(self.root)['ready'])
+        self.assertFalse(self.root.exists())
+
     def test_wrong_state_layout_is_not_overwritten(self):
         self.root.mkdir()
         for child, directory in [('outputs', False), ('queue.sqlite3', True)]:
