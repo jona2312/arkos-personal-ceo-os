@@ -12,4 +12,5 @@ COPY config/cloud-gateway.json config/cloud-terms-record.json ./config/
 USER arkos
 CMD ["python", "-B", "-m", "arkos_cloud", "serve", "--gateway-config", "config/cloud-gateway.json", \
      "--terms-record", "config/cloud-terms-record.json", "--ledger", "/var/lib/arkos-gateway/ledger.sqlite3", \
-     "--host", "127.0.0.1", "--port", "8787", "--trusted-proxy", "127.0.0.1"]
+     "--host", "127.0.0.1", "--port", "8787", "--trusted-proxy", "127.0.0.1", \
+     "--trial-name", "piloto-real-1", "--trial-budget-micro-usd", "1000000"]

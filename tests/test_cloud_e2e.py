@@ -306,11 +306,11 @@ class GatewayProcessRestartTests(unittest.TestCase):
         self.consent = ConsentStore(self.tmp / "pc")
         self.consent.grant(self.client_config.disclosure, self.client_config.disclosure.digest()[:CONFIRM_CHARS])
 
-    def spawn(self):
+    def spawn(self, *extra):
         env = dict(os.environ, ARKOS_CLOUD_PROVIDER_KEY=FAKE_KEY, ARKOS_CLOUD_TEST_PROVIDER_URL=self.fake.url,
                    PYTHONIOENCODING="utf-8")
         proc = subprocess.Popen([sys.executable, "-B", "-m", "arkos_cloud", "serve", "--gateway-config",
-                                 str(self.config_path), "--ledger", str(self.ledger_path), "--port", "0"],
+                                 str(self.config_path), "--ledger", str(self.ledger_path), "--port", "0", *extra],
                                 cwd=ROOT, env=env, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
         def cleanup():
             if proc.poll() is None:
@@ -365,6 +365,28 @@ class GatewayProcessRestartTests(unittest.TestCase):
         self.assertEqual(ledger.get("user-a", "e2e-req-0001")["state"], "reconciled")
         self.assertEqual(ledger.open_reservations(), 0)
 
+    def test_trial_budget_survives_process_kill_and_restart_without_flags(self):
+        proc, url = self.spawn("--trial-name", "piloto-real-1", "--trial-budget-micro-usd", "1000000")
+        self.assertTrue(url)
+        adapter = CloudConversationProvider(self.client_config, self.consent, HttpTransport(url), TOKEN_A)
+        self.assertEqual(adapter.converse(request("trial-e2e-0001"))["status"], "ok")
+        proc.kill()
+        proc.wait(10)
+        restarted, url2 = self.spawn()  # no trial flags: the open trial is still enforced
+        self.assertTrue(url2)
+        status = json.loads(subprocess.run([sys.executable, "-B", "-m", "arkos_cloud", "trial", "status", "--ledger",
+                                            str(self.ledger_path)], cwd=ROOT, capture_output=True, text=True,
+                                           timeout=30).stdout)
+        self.assertEqual(status["trial"]["name"], "piloto-real-1")
+        self.assertGreater(status["trial"]["charged_micro_usd"], 0)
+        self.assertEqual(status["turns_with_latency"], 1)
+        self.assertIsNone(status["latency_ms"]["p95"])  # one turn says nothing about p95
+        changed, url3 = self.spawn("--trial-name", "piloto-real-1", "--trial-budget-micro-usd", "5000000")
+        self.assertIsNone(url3)  # cannot raise an open trial's budget by restarting with other flags
+        self.assertEqual(changed.wait(10), 3)
+        restarted.terminate()
+        restarted.wait(10)
+
 
 class HttpWithoutSdkTests(unittest.TestCase):
     """Server + HTTP transport with the in-process simulated provider: runs even without the SDK."""
@@ -415,7 +437,7 @@ class HttpWithoutSdkTests(unittest.TestCase):
         self.assertEqual(len(self.provider.calls), 2)
 
     def test_real_smoke_script_refuses_test_gateways_and_reports_no_content(self):
-        url = self.serve()
+        url = self.serve(rate_limit=10_000)  # the latency sample makes ~3 requests per turn
         cfg = self.tmp / 'client.json'
         data = json.loads(json.dumps(self.config.__dict__, default=lambda o: o.__dict__))
         data['gateway_url'] = url
@@ -423,7 +445,7 @@ class HttpWithoutSdkTests(unittest.TestCase):
         env = dict(os.environ, ARKOS_CLOUD_DEVICE_TOKEN=TOKEN_A)
         state = self.tmp / 'smoke'
         base = [sys.executable, '-B', 'scripts/Run-ArkosCloudRealSmoke.py', '--state-dir', str(state),
-                '--cloud-config', str(cfg), '--report', str(self.tmp / 'r.json')]
+                '--cloud-config', str(cfg), '--report', str(self.tmp / 'r.json'), '--pace-seconds', '0']
         no_flag = subprocess.run(base, cwd=ROOT, env=env, capture_output=True, text=True, timeout=60)
         self.assertNotEqual(no_flag.returncode, 0)
         no_consent = subprocess.run(base + ['--confirm-paid-calls'], cwd=ROOT, env=env, capture_output=True, text=True, timeout=60)
@@ -443,6 +465,24 @@ class HttpWithoutSdkTests(unittest.TestCase):
         raw = (self.tmp / 'r.json').read_text(encoding='utf-8')
         self.assertNotIn('presupuesto del piloto', raw)
         self.assertNotIn(TOKEN_A, raw + ok.stdout + ok.stderr)
+        self.assertEqual(len(report['latency_ms']['each']), 2)
+        self.assertIsNone(report['latency_ms']['p95'])                # 2 turns: no p95
+        # Latency sample: independent turns, every latency reported, p95 only from >= 20 turns.
+        sample = subprocess.run(base + ['--confirm-paid-calls', '--allow-test-gateway', '--latency-sample', '20'],
+                                cwd=ROOT, env=env, capture_output=True, text=True, timeout=300)
+        self.assertEqual(sample.returncode, 0, sample.stdout + sample.stderr)
+        report = json.loads((self.tmp / 'r.json').read_text(encoding='utf-8'))
+        self.assertEqual(len(report['latency_ms']['each']), 20)
+        self.assertIsNotNone(report['latency_ms']['p95'])
+        self.assertEqual({len(c['messages']) for c in self.provider.calls[2:]}, {1})
+        # A trial whose remaining budget cannot cover the plan stops everything before sending.
+        before = len(self.provider.calls)
+        self.gateway.ledger.start_trial('piloto-real-1', 50_000)
+        short = subprocess.run(base + ['--confirm-paid-calls', '--allow-test-gateway', '--latency-sample', '20'],
+                               cwd=ROOT, env=env, capture_output=True, text=True, timeout=60)
+        self.assertEqual(short.returncode, 2, short.stdout)
+        self.assertIn('insuficiente', json.loads((self.tmp / 'r.json').read_text(encoding='utf-8'))['aborted'])
+        self.assertEqual(len(self.provider.calls), before)
 
     def test_tls_verification(self):
         import shutil

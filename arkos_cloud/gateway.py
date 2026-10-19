@@ -111,6 +111,7 @@ class CloudGateway:
             self._instance.release()
             raise
         self._cancel = {}
+        self._started = {}  # (user, rid) -> monotonic start of the provider call, for latency
         self._lock = threading.Lock()
 
     def close(self):
@@ -172,8 +173,8 @@ class CloudGateway:
                                                self.config.per_user_daily_micro_usd, self.config.global_daily_micro_usd,
                                                self.config.global_monthly_micro_usd)
         except LedgerError as exc:
-            status = {"conflict": 409, "busy": 409, "budget_exhausted": 429}[exc.code]
-            code = "budget_exhausted" if exc.code == "budget_exhausted" else "duplicate_request"
+            status = {"conflict": 409, "busy": 409, "budget_exhausted": 429, "trial_exhausted": 429}[exc.code]
+            code = "budget_exhausted" if exc.code in ("budget_exhausted", "trial_exhausted") else "duplicate_request"
             return status, _error(rid, code, str(exc))
         if not created:
             return 200, self._replay(row)
@@ -204,6 +205,7 @@ class CloudGateway:
         if not self.ledger.mark_sent(user, rid):
             return c.response(rid, "cancelled", error=("cancelled", "Cancelado antes de enviar"))
         reserved = self.ledger.get(user, rid)["reserved"]
+        self._started[(user, rid)] = time.monotonic()
         try:
             result = self.provider.complete(system=c.SYSTEM_PROMPT, messages=request["messages"],
                                             max_output_tokens=self.config.disclosure.max_output_tokens,
@@ -241,6 +243,9 @@ class CloudGateway:
         return body
 
     def _settle(self, user, rid, outcome, **kwargs):
+        started = self._started.pop((user, rid), None)
+        if started is not None:
+            kwargs.setdefault("latency_ms", int((time.monotonic() - started) * 1000))
         try:
             return self.ledger.settle(user, rid, outcome, **kwargs)
         except LedgerError:
@@ -254,7 +259,7 @@ class CloudGateway:
     def status(self):
         """What the PC must check before activation: same disclosure, and test vs real provider."""
         return {"disclosure_digest": self.config.disclosure.digest(), "disclosure": self.config.disclosure.as_dict(),
-                "provider_mode": self.provider_mode, "terms_digest": self.terms_digest}
+                "provider_mode": self.provider_mode, "terms_digest": self.terms_digest, "trial": self.ledger.trial()}
 
     def cancel(self, user, rid):
         row = self.ledger.request_cancel(user, rid, day=utc_day(self.clock()))

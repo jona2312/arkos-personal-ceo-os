@@ -12,6 +12,8 @@ Gateway operator (works while the gateway runs; changes apply to the next reques
   python -m arkos_cloud token list   --ledger L
   python -m arkos_cloud reconcile    --ledger L --user U --request-id R --charged MICRO_USD
   python -m arkos_cloud backup       --ledger L --out DIR [--keep 14]   (copia consistente en caliente)
+  python -m arkos_cloud trial status --ledger L     (presupuesto acumulado, reservas abiertas, latencias)
+  python -m arkos_cloud trial close  --ledger L --name N
 """
 import argparse
 import json
@@ -102,6 +104,55 @@ def _provider_key():
     return key
 
 
+def _open_trial(ledger, name, budget, provider_mode):
+    """Continue/open the cumulative trial budget. A real provider never runs without one."""
+    from .ledger import LedgerError
+    if (name is None) != (budget is None):
+        raise ValueError("--trial-name y --trial-budget-micro-usd van juntos")
+    try:
+        trial = ledger.start_trial(name, budget) if name else ledger.trial()
+    except LedgerError as exc:
+        raise ValueError(str(exc))
+    if provider_mode == "real" and trial is None:
+        raise ValueError("Proveedor real sin presupuesto de prueba: indicá --trial-name y --trial-budget-micro-usd.")
+    return trial
+
+
+def _percentile(values, pct):
+    """Nearest-rank percentile; None when the sample is too small to say anything about it."""
+    if len(values) < 20:
+        return None
+    ordered = sorted(values)
+    return ordered[max(0, -(-pct * len(ordered) // 100) - 1)]
+
+
+def _trial(args):
+    from .ledger import Ledger, LedgerError
+    if not args.ledger.exists():
+        print("Ledger inexistente.", file=sys.stderr)
+        return 2
+    ledger = Ledger(args.ledger)
+    try:
+        if args.action == "close":
+            ledger.close_trial(args.name)
+            print("Prueba cerrada.")
+            return 0
+        trial = ledger.trial()
+        started = ledger.db.execute("SELECT started FROM trials WHERE closed IS NULL").fetchone()
+        latencies = ledger.latencies(since=started[0] if started else None)
+        print(json.dumps(dict(trial=trial, turns_with_latency=len(latencies),
+                              latency_ms=dict(max=max(latencies) if latencies else None,
+                                              p50=_percentile(latencies, 50), p95=_percentile(latencies, 95),
+                                              note="p50/p95 solo con 20 o más turnos; con menos no son representativos")),
+                         ensure_ascii=False, indent=2))
+        return 0
+    except LedgerError as exc:
+        print(str(exc), file=sys.stderr)
+        return 1
+    finally:
+        ledger.close()
+
+
 def _serve(args):
     from .gateway import CloudGateway
     from .provider_anthropic import AnthropicProvider
@@ -129,6 +180,13 @@ def _serve(args):
             raise ValueError("Proveedor real bloqueado: las condiciones no están verificadas. Pendiente:\n- "
                              + "\n- ".join(verdict["pending"]))
         gateway = CloudGateway(config, args.ledger, provider, terms_digest=terms_digest)
+        try:
+            trial = _open_trial(gateway.ledger, args.trial_name, args.trial_budget_micro_usd, provider.mode)
+        except BaseException:
+            gateway.close()
+            raise
+        if trial:
+            print(json.dumps({"trial": trial}), file=sys.stderr, flush=True)
     except (RuntimeError, ValueError, OSError) as exc:
         print(str(exc), file=sys.stderr)
         return 3
@@ -210,6 +268,12 @@ def main(argv=None):
     serve.add_argument("--behind-tls-proxy", action="store_true")
     serve.add_argument("--trusted-proxy", help="IP del proxy TLS local cuyo X-Forwarded-For se usa para el límite por dirección")
     serve.add_argument("--terms-record", type=Path, help="Registro de condiciones (por defecto config/cloud-terms-record.json)")
+    serve.add_argument("--trial-name", help="Prueba con presupuesto acumulado (persistente; se cierra con 'trial close')")
+    serve.add_argument("--trial-budget-micro-usd", type=int)
+    trial = sub.add_parser("trial")
+    trial.add_argument("action", choices=("status", "close"))
+    trial.add_argument("--ledger", type=Path, required=True)
+    trial.add_argument("--name")
     backup = sub.add_parser("backup")
     backup.add_argument("--ledger", type=Path, required=True)
     backup.add_argument("--out", type=Path, required=True)
@@ -226,6 +290,10 @@ def main(argv=None):
         return _serve(args)
     if args.command == "backup":
         return _backup(args)
+    if args.command == "trial":
+        if args.action == "close" and not args.name:
+            parser.error("trial close requiere --name")
+        return _trial(args)
     if args.command == "token" and args.action == "issue" and not args.user:
         parser.error("token issue requiere --user")
     if args.command == "token" and args.action == "revoke" and bool(args.user) == bool(args.prefix):

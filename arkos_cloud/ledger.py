@@ -18,7 +18,8 @@ import sqlite3
 import threading
 import time
 
-SCHEMA_VERSION = 2
+SCHEMA_VERSION = 3
+MIGRATABLE = (2,)  # older schemas this code upgrades in place (additive only)
 OPEN = ("reserved", "sent", "uncertain")   # reservations not yet settled
 IN_FLIGHT = ("reserved", "sent")
 CANCELLED_BEFORE_ARRIVAL = "-"  # never a sha256 digest
@@ -52,7 +53,7 @@ class Ledger:
         self.db.row_factory = sqlite3.Row
         self.db.execute("PRAGMA journal_mode=WAL")
         version = self.db.execute("PRAGMA user_version").fetchone()[0]
-        if version not in (0, SCHEMA_VERSION):
+        if version not in (0, SCHEMA_VERSION, *MIGRATABLE):
             self.db.close()
             raise RuntimeError(f"Ledger con esquema {version}; este gateway usa {SCHEMA_VERSION}. No se modifica.")
         with self._transaction():
@@ -66,6 +67,13 @@ class Ledger:
                 charged INTEGER NOT NULL DEFAULT 0, PRIMARY KEY (scope, day))""")
             self.db.execute("""CREATE TABLE IF NOT EXISTS tokens (
                 token_hash TEXT PRIMARY KEY, user_id TEXT NOT NULL, created REAL NOT NULL, revoked REAL)""")
+            columns = {r[1] for r in self.db.execute("PRAGMA table_info(calls)")}
+            if "latency_ms" not in columns:  # v2 -> v3, additive
+                self.db.execute("ALTER TABLE calls ADD COLUMN latency_ms INTEGER")
+            # A trial budget is cumulative over its whole life: it ignores day and month and
+            # survives restarts. Only an explicit operator close ends it.
+            self.db.execute("""CREATE TABLE IF NOT EXISTS trials (
+                name TEXT PRIMARY KEY, limit_micro_usd INTEGER NOT NULL, started REAL NOT NULL, closed REAL)""")
             self.db.execute(f"PRAGMA user_version={SCHEMA_VERSION}")
 
     @_serialized
@@ -193,6 +201,67 @@ class Ledger:
         return self.db.execute(query + ("" if user is None else " AND user_id=?"),
                                OPEN + (() if user is None else (user,))).fetchone()[0]
 
+    # --- trial budget (cumulative, persistent) ------------------------------------------
+    def _active_trial(self):
+        row = self.db.execute("SELECT * FROM trials WHERE closed IS NULL").fetchone()
+        return dict(row) if row else None
+
+    def _trial_exposure(self, trial):
+        """Everything charged plus every reservation still open (in flight or uncertain) since the
+        trial started. Day and month boundaries do not matter."""
+        return self.db.execute(
+            "SELECT COALESCE(SUM(charged),0) + COALESCE(SUM(CASE WHEN state IN (?,?,?) THEN reserved ELSE 0 END),0) "
+            "FROM calls WHERE created >= ?", (*OPEN, trial["started"])).fetchone()[0]
+
+    @_serialized
+    def start_trial(self, name, limit_micro_usd):
+        """Idempotent for the same open trial; refuses to change an open trial's limit or open a second one."""
+        if not isinstance(name, str) or not 1 <= len(name) <= 64 or type(limit_micro_usd) is not int or limit_micro_usd < 0:
+            raise ValueError("Prueba inválida")
+        with self._transaction():
+            active = self._active_trial()
+            if active:
+                if active["name"] != name or active["limit_micro_usd"] != limit_micro_usd:
+                    raise LedgerError("conflict", f"Ya hay una prueba abierta ({active['name']}, "
+                                      f"{active['limit_micro_usd']} µUSD). Cerrala antes de abrir otra.")
+                return self._trial_view(active)
+            if self.db.execute("SELECT 1 FROM trials WHERE name=?", (name,)).fetchone():
+                raise LedgerError("conflict", "Esa prueba ya existió y está cerrada; usá otro nombre")
+            self.db.execute("INSERT INTO trials VALUES (?,?,?,NULL)", (name, limit_micro_usd, time.time()))
+            return self._trial_view(self._active_trial())
+
+    def _trial_view(self, trial):
+        spent = self.db.execute("SELECT COALESCE(SUM(charged),0) FROM calls WHERE created >= ?",
+                                (trial["started"],)).fetchone()[0]
+        exposure = self._trial_exposure(trial)
+        return dict(name=trial["name"], limit_micro_usd=trial["limit_micro_usd"], charged_micro_usd=spent,
+                    open_micro_usd=exposure - spent, remaining_micro_usd=max(0, trial["limit_micro_usd"] - exposure),
+                    closed=trial["closed"] is not None)
+
+    @_serialized
+    def trial(self):
+        active = self._active_trial()
+        return self._trial_view(active) if active else None
+
+    @_serialized
+    def close_trial(self, name):
+        with self._transaction():
+            active = self._active_trial()
+            if not active or active["name"] != name:
+                raise LedgerError("conflict", "No hay una prueba abierta con ese nombre")
+            self.db.execute("UPDATE trials SET closed=? WHERE name=?", (time.time(), name))
+        return True
+
+    @_serialized
+    def latencies(self, since=None):
+        """Provider-call latency (ms) of completed calls, oldest first."""
+        query = "SELECT latency_ms FROM calls WHERE state='completed' AND latency_ms IS NOT NULL"
+        args = ()
+        if since is not None:
+            query += " AND created >= ?"
+            args = (since,)
+        return [r[0] for r in self.db.execute(query + " ORDER BY created", args)]
+
     # --- lifecycle ----------------------------------------------------------------------
     @_serialized
     def reserve(self, user, rid, digest, amount, day, user_limit, global_limit, monthly_limit=None):
@@ -213,6 +282,12 @@ class Ledger:
                         or self._exposure(None, day) + amount > global_limit
                         or (monthly_limit is not None and self._month_exposure(day) + amount > monthly_limit)):
                     raise LedgerError("budget_exhausted", "Presupuesto insuficiente para este pedido")
+                trial = self._active_trial()
+                if trial is None and self.db.execute("SELECT 1 FROM trials LIMIT 1").fetchone():
+                    # A ledger that ever had a trial never falls back to "no cap": closing stops sending.
+                    raise LedgerError("trial_exhausted", "La prueba está cerrada: no se envía nada más")
+                if trial and self._trial_exposure(trial) + amount > trial["limit_micro_usd"]:
+                    raise LedgerError("trial_exhausted", "Presupuesto de la prueba agotado: no se envía nada más")
                 now = time.time()
                 self.db.execute("INSERT INTO calls (user_id, request_id, digest, state, day, reserved, created, updated) "
                                 "VALUES (?,?,?,?,?,?,?,?)", (user, rid, digest, "reserved", day, amount, now, now))
@@ -249,7 +324,7 @@ class Ledger:
             return True
 
     @_serialized
-    def settle(self, user, rid, outcome, charged=0, response=None):
+    def settle(self, user, rid, outcome, charged=0, response=None, latency_ms=None):
         """outcome: completed | not_charged | uncertain. A cancel request wins over 'completed'."""
         with self._transaction():
             row = self._need(user, rid)
@@ -264,6 +339,9 @@ class Ledger:
                 self._set(row, "cancelled", charged=charged, overrun=overrun)  # paid; content discarded
             else:
                 self._set(row, "completed", charged=charged, response=response, overrun=overrun)
+            if latency_ms is not None:
+                self.db.execute("UPDATE calls SET latency_ms=? WHERE user_id=? AND request_id=?",
+                                (int(latency_ms), user, rid))
         return self.get(user, rid)
 
     @_serialized

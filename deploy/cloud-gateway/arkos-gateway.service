@@ -18,7 +18,10 @@ ExecStart=/opt/arkos/.venv/bin/python -B -m arkos_cloud serve \
   --gateway-config /opt/arkos/config/cloud-gateway.json \
   --terms-record /opt/arkos/config/cloud-terms-record.json \
   --ledger /var/lib/arkos-gateway/ledger.sqlite3 \
-  --host 127.0.0.1 --port 8787 --trusted-proxy 127.0.0.1
+  --host 127.0.0.1 --port 8787 --trusted-proxy 127.0.0.1 \
+  --trial-name piloto-real-1 --trial-budget-micro-usd 1000000
+# La prueba (USD 1 acumulado) vive en el ledger: reiniciar no la reabre ni la amplía, y con la
+# prueba cerrada el servicio no arranca con el proveedor real.
 Restart=on-failure
 RestartSec=5
 # Endurecimiento

@@ -137,9 +137,11 @@ class CloudConversationProvider:
         if (not isinstance(data, dict) or not isinstance(data.get("disclosure_digest"), str)
                 or data.get("provider_mode") not in ("test", "real")):
             return None
-        terms = data.get("terms_digest")
+        terms, trial = data.get("terms_digest"), data.get("trial")
+        trial = ({k: trial.get(k) for k in ("name", "limit_micro_usd", "charged_micro_usd", "open_micro_usd",
+                                            "remaining_micro_usd")} if isinstance(trial, dict) else None)
         return {"disclosure_digest": data["disclosure_digest"], "provider_mode": data["provider_mode"],
-                "terms_digest": terms if isinstance(terms, str) else None}
+                "terms_digest": terms if isinstance(terms, str) else None, "trial": trial}
 
     def lookup(self, request_id):
         """Explicit human 'check status' action: reads billing state; never triggers a call."""
