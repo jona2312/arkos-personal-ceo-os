@@ -1,0 +1,32 @@
+# Alternativa con Docker Compose para un VPS que ya usa contenedores (p. ej. el de n8n).
+# Plantilla, NO levantar sin aprobación. network_mode: host para que el gateway vea al proxy como 127.0.0.1.
+services:
+  gateway:
+    build:
+      context: ../..
+      dockerfile: deploy/cloud-gateway/Dockerfile
+    network_mode: host
+    restart: unless-stopped
+    read_only: true
+    user: "10001:10001"
+    environment:
+      ARKOS_CLOUD_PROVIDER_KEY_FILE: /run/secrets/provider_key
+    secrets:
+      - provider_key
+    volumes:
+      - arkos-gateway:/var/lib/arkos-gateway
+    tmpfs:
+      - /tmp
+  caddy:
+    image: caddy:2.8.4
+    network_mode: host
+    restart: unless-stopped
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+secrets:
+  provider_key:
+    file: /etc/arkos/provider_key   # chmod 400, dueño uid 10001; nunca dentro del repo
+volumes:
+  arkos-gateway:
+  caddy-data:

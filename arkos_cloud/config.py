@@ -58,6 +58,9 @@ class Disclosure:
     model: str
     region: str
     provider_retention_days: int
+    provider_flagged_retention_days: int
+    provider_trains_on_data: bool
+    provider_storage_region: str
     gateway_retention_hours: int
     max_input_chars: int
     max_output_tokens: int
@@ -67,18 +70,24 @@ class Disclosure:
     terms_verified: bool
 
     FIELDS = ("policy_version", "provider", "model", "region", "provider_retention_days",
+              "provider_flagged_retention_days", "provider_trains_on_data", "provider_storage_region",
               "gateway_retention_hours", "max_input_chars", "max_output_tokens", "per_user_daily_micro_usd",
               "global_daily_micro_usd", "global_monthly_micro_usd", "terms_verified")
 
     @classmethod
     def from_mapping(cls, data):
         _strict(data, cls.FIELDS, "disclosure")
-        if type(data["terms_verified"]) is not bool:
-            raise ConfigError("terms_verified debe ser true o false")
+        for flag in ("terms_verified", "provider_trains_on_data"):
+            if type(data[flag]) is not bool:
+                raise ConfigError(f"{flag} debe ser true o false")
         d = cls(policy_version=_name(data["policy_version"], "policy_version"),
                 provider=_name(data["provider"], "provider"), model=_name(data["model"], "model"),
                 region=_name(data["region"], "region"),
                 provider_retention_days=_int(data["provider_retention_days"], 0, 3650, "provider_retention_days"),
+                provider_flagged_retention_days=_int(data["provider_flagged_retention_days"], 0, 3650,
+                                                     "provider_flagged_retention_days"),
+                provider_trains_on_data=data["provider_trains_on_data"],
+                provider_storage_region=_name(data["provider_storage_region"], "provider_storage_region"),
                 gateway_retention_hours=_int(data["gateway_retention_hours"], 0, 72, "gateway_retention_hours"),
                 max_input_chars=_int(data["max_input_chars"], 1, c.MAX_HISTORY_CHARS, "max_input_chars"),
                 max_output_tokens=_int(data["max_output_tokens"], 16, 4096, "max_output_tokens"),
@@ -105,7 +114,10 @@ class Disclosure:
         """Human-readable text shown before consent. Plain text; the caller escapes it."""
         return (f"Proveedor: {self.provider} · modelo {self.model} · región {self.region}\n"
                 f"Datos enviados: {DATA_SENT}\n"
-                f"Retención del proveedor: {self.provider_retention_days} días (según su política)\n"
+                f"Retención del proveedor: hasta {self.provider_retention_days} días; si su sistema de seguridad "
+                f"marca el pedido, hasta {self.provider_flagged_retention_days} días\n"
+                f"Uso para entrenar modelos: {'sí' if self.provider_trains_on_data else 'no'}\n"
+                f"Inferencia: {self.region} · almacenamiento del proveedor: {self.provider_storage_region}\n"
                 f"Retención en el gateway ARKOS: {self.gateway_retention_hours} h para no repetir cobros\n"
                 f"Límites: {self.max_input_chars} caracteres de entrada, {self.max_output_tokens} tokens de salida\n"
                 f"Gasto máximo: USD {self.per_user_daily_micro_usd / 1e6:.2f} por usuario por día, "

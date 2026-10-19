@@ -1,6 +1,6 @@
 # Propuesta de despliegue: ARKOS Cloud (conversación de texto)
 
-Estado: **propuesta, no ejecutada**. Revisión de preparación: `docs/CLOUD_STAGING_REVIEW.md`. Nada de esto se desplegó ni se configuró. Requiere
+Estado: **propuesta, no ejecutada**. Versión operativa y condiciones verificadas: `docs/CLOUD_PILOT_REAL.md`. Revisión de preparación: `docs/CLOUD_STAGING_REVIEW.md`. Nada de esto se desplegó ni se configuró. Requiere
 aprobación explícita de Jona en cada fase. Lo financiero es estimativo y educativo.
 
 ## 1. Decisiones que hay que aprobar antes de escribir código productivo
@@ -77,7 +77,9 @@ Configuración recomendada para el piloto:
 - Precios del gateway en µUSD/MTok para Haiku 5.5: 100.000 / 500.000, umbral 100.000,
   500.000 / 2.500.000 (×1,1 si `inference_geo` = US).
 - `per_user_daily_micro_usd`: 200.000 (USD 0,20); `global_daily_micro_usd`: 1.000.000 (USD 1);
-  límite mensual en la consola del proveedor: USD 10.
+  `global_monthly_micro_usd`: 10.000.000 (USD 10, tope del gateway).
+- Aparte: límite de gasto del workspace en la Console del proveedor, USD 5 durante el piloto, y
+  presupuesto acumulado de la prueba en el gateway, USD 1 (ver `docs/CLOUD_PILOT_REAL.md`, sección 3).
 
 Las reservas abiertas (en vuelo o inciertas) siguen contando contra el tope de los días
 siguientes hasta conciliarse: un incidente de red no puede llevar el gasto por encima del tope.
@@ -88,7 +90,7 @@ siguientes hasta conciliarse: un incidente de red no puede llevar el gasto por e
    prueba. Criterios: escenarios equivalentes a los 37 tests pasan sobre HTTPS real (consentimiento,
    límites, idempotencia, pérdida, cancelación, reinicio del contenedor).
 2. **Clave real con tope mínimo**: secreto en el hosting, límite de USD 5 en la consola,
-   `global_daily_micro_usd=200000`. Pruebas: 10 turnos en español, una propuesta→tarea
+   presupuesto acumulado de la prueba de USD 1 en el gateway (`--trial-budget-micro-usd 1000000`). Pruebas: 10 turnos en español, una propuesta→tarea
    pendiente→aprobación humana separada, cancelar a mitad, cortar la red tras enviar
    (debe quedar incierto y no reintentar), conciliar con el panel de uso del proveedor.
 3. **Piloto con Jona**: habilitar selector Cloud en su PC, una semana, revisar gasto real

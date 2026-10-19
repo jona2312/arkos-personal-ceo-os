@@ -244,7 +244,13 @@
     term(list, 'Retención en ARKOS', d.gateway_retention_hours === 0
       ? '0 h: el gateway no guarda el texto de las respuestas. Si una respuesta se pierde, no se puede recuperar.'
       : d.gateway_retention_hours+' h, para poder reenviar una respuesta perdida sin volver a cobrar.');
-    term(list, 'Retención del proveedor', d.provider_retention_days+' días según su política'+(d.terms_verified ? '' : ' · SIN VERIFICAR'), !d.terms_verified);
+    const t = cloudInfo.terms || {pending:[], problems:[], sources:[]};
+    term(list, 'Retención del proveedor', 'Hasta '+d.provider_retention_days+' días; si su sistema de seguridad marca el pedido, hasta '
+      +d.provider_flagged_retention_days+' días'+(t.ok ? '' : ' · SIN VERIFICAR para esta cuenta'), !t.ok);
+    term(list, 'Entrenamiento', d.provider_trains_on_data ? 'El proveedor puede usar estos datos para entrenar.' : 'El proveedor no entrena modelos con estos datos (Términos Comerciales).');
+    term(list, 'Región', 'Inferencia: '+(d.region==='global' ? 'cualquier geografía disponible' : d.region)+' · almacenamiento del proveedor: '+d.provider_storage_region.toUpperCase());
+    term(list, 'Verificación', t.ok ? 'Fuentes oficiales revisadas el '+t.reviewed_on+' y cuenta confirmada.'
+      : 'Fuentes oficiales revisadas el '+(t.reviewed_on||'—')+'. Pendiente: '+t.pending.length+' comprobaciones'+(t.problems.length ? ' y '+t.problems.length+' problemas' : '')+'. Solo prueba.', !t.ok);
     term(list, 'Límites de gasto', usd(d.limits_usd.per_user_daily)+' por usuario por día · '+usd(d.limits_usd.global_daily)+' global por día · '+usd(d.limits_usd.global_monthly)+' global por mes');
     term(list, 'Cancelar', 'Deja de esperar la respuesta. Si el pedido ya llegó al proveedor, puede cobrarse igual.');
     term(list, 'Reintentos', 'Nunca automáticos. Un resultado incierto se consulta, no se reenvía.');

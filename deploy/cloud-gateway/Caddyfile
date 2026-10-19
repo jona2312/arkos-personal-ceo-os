@@ -1,0 +1,25 @@
+# Plantilla. Reemplazar el dominio por el subdominio aprobado (A/AAAA apuntando al servidor).
+# Caddy obtiene y renueva el certificado TLS (Let's Encrypt) y redirige HTTP -> HTTPS.
+arkos-gw.example.invalid {
+	request_body {
+		max_size 300KB
+	}
+	# Solo las rutas del gateway; todo lo demás, 404.
+	@gateway path /v1/conversations /v1/conversations/* /v1/status
+	handle @gateway {
+		reverse_proxy 127.0.0.1:8787 {
+			# Caddy agrega X-Forwarded-For; el gateway solo lo usa porque el par es 127.0.0.1 (--trusted-proxy).
+			transport http {
+				response_header_timeout 320s
+			}
+		}
+	}
+	handle {
+		respond 404
+	}
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		-Server
+	}
+	# Sin access log: el gateway ya registra método, ruta genérica, estado y ms, sin contenido ni tokens.
+}

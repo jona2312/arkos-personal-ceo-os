@@ -14,6 +14,7 @@ import threading
 import time
 
 from arkos_hermes import contract as c
+from arkos_cloud import terms as cloud_terms
 from arkos_cloud.adapter import CloudConversationProvider
 from arkos_cloud.config import ClientConfig
 from arkos_cloud.consent import CONFIRM_CHARS, ConsentStore
@@ -45,10 +46,14 @@ class CloudSessionGuard:
 
 
 class CloudLink:
-    def __init__(self, state_dir, config, device_token, transport=None, ca_file=None):
+    def __init__(self, state_dir, config, device_token, transport=None, ca_file=None, terms_path=None):
         if not isinstance(config, ClientConfig):
             raise ValueError('Configuración Cloud inválida')
         self.config = config
+        try:
+            self.terms_record, self.terms_digest = cloud_terms.load(terms_path)
+        except (OSError, ValueError):
+            self.terms_record, self.terms_digest = None, None  # real activation stays blocked
         self.consent = ConsentStore(Path(state_dir) / 'cloud')
         self.transport = transport or HttpTransport(config.gateway_url, ca_file)
         self.adapter = CloudConversationProvider(config, self.consent, self.transport, device_token)
@@ -71,6 +76,11 @@ class CloudLink:
                 self._status, self._checked = self.adapter.gateway_status(), time.monotonic()
             return self._status
 
+    def terms(self):
+        if self.terms_record is None:
+            return dict(ok=False, problems=['No se pudo leer el registro de condiciones.'], pending=[], summary={})
+        return cloud_terms.evaluate(self.terms_record, self.config.disclosure)
+
     def activation(self, refresh=False):
         disclosure = self.config.disclosure
         gateway = self.gateway_status(refresh)
@@ -81,9 +91,15 @@ class CloudLink:
         if gateway['disclosure_digest'] != disclosure.digest():
             return dict(state='blocked', test=test, reason='Las condiciones del gateway no coinciden con las que '
                         'ves acá. No se envía nada hasta actualizar la configuración y volver a aceptar.')
-        if not test and not disclosure.terms_verified:
-            return dict(state='blocked', test=test, reason='Activación real bloqueada: las condiciones del '
-                        'proveedor (retención, límites y precios) todavía no están verificadas.')
+        if not test:
+            verdict = self.terms()
+            if not disclosure.terms_verified or not verdict['ok']:
+                return dict(state='blocked', test=test, reason='Activación real bloqueada: las condiciones del '
+                            'proveedor no están verificadas ({} pendientes, {} problemas).'.format(
+                                len(verdict['pending']), len(verdict['problems'])))
+            if gateway.get('terms_digest') != self.terms_digest:
+                return dict(state='blocked', test=test, reason='El gateway usa otro registro de condiciones que '
+                            'esta PC. No se envía nada hasta que coincidan.')
         if not self.consent.valid_for(disclosure):
             return dict(state='needs_consent', test=test, reason='Cloud requiere tu consentimiento para estas condiciones.')
         return dict(state='ready', test=test, reason='')
@@ -97,10 +113,19 @@ class CloudLink:
                 provider=d.provider, model=d.model, region=d.region, data_sent=d.as_dict()['data_sent'],
                 gateway_retention_hours=d.gateway_retention_hours, provider_retention_days=d.provider_retention_days,
                 terms_verified=d.terms_verified, max_input_chars=d.max_input_chars,
+                provider_flagged_retention_days=d.provider_flagged_retention_days,
+                provider_trains_on_data=d.provider_trains_on_data, provider_storage_region=d.provider_storage_region,
                 max_output_tokens=d.max_output_tokens, policy_version=d.policy_version,
                 limits_usd=dict(per_user_daily=d.per_user_daily_micro_usd / 1e6,
                                 global_daily=d.global_daily_micro_usd / 1e6,
                                 global_monthly=d.global_monthly_micro_usd / 1e6)))
+        verdict = self.terms()
+        record = self.terms_record or {}
+        info['terms'] = dict(ok=verdict['ok'], reviewed_on=record.get('reviewed_on'), valid_until=record.get('valid_until'),
+                             pending=verdict['pending'], problems=verdict['problems'],
+                             sources=[dict(id=x.get('id'), title=x.get('title'), url=x.get('url'),
+                                           retrieved_on=x.get('retrieved_on'), read_directly=x.get('read_directly'))
+                                      for x in record.get('public_sources') or [] if isinstance(x, dict)])
         return info
 
     def accept(self, code):

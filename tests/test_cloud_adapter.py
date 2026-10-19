@@ -115,13 +115,13 @@ class ConfigTests(CloudTestCase):
             for forbidden in ("os.environ", "getenv", "anthropic", *network):
                 if forbidden in allowed.get(path.name, set()):
                     continue
-                if forbidden == "anthropic" and path.name in ("__main__.py", "gateway.py", "server.py"):
+                if forbidden == "anthropic" and path.name in ("__main__.py", "gateway.py", "server.py", "terms.py"):
                     # names only: these import provider_anthropic lazily or mention it in docs
                     self.assertNotIn("import anthropic", source, path.name)
                     continue
                 self.assertNotIn(forbidden, source, f"{path.name} contiene {forbidden}")
         main = (ROOT / "arkos_cloud" / "__main__.py").read_text(encoding="utf-8")
-        self.assertLessEqual(set(re.findall(r"os\.environ\.get\((\w+)", main)), {"KEY_ENV", "TEST_BASE_URL_ENV"})
+        self.assertLessEqual(set(re.findall(r"os\.environ\.get\((\w+)", main)), {"KEY_ENV", "KEY_FILE_ENV", "TEST_BASE_URL_ENV"})
         self.assertNotIn("os.environ[", main)
         for client_side in ("adapter.py", "config.py", "consent.py", "http_transport.py"):
             source = (ROOT / "arkos_cloud" / client_side).read_text(encoding="utf-8")

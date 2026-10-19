@@ -9,7 +9,8 @@ from arkos_cloud.gateway import ProviderLost, ProviderNotSent, ProviderRejected,
 TOKEN_A = "akc_" + "a" * 40
 TOKEN_B = "akc_" + "b" * 40
 DISCLOSURE = dict(policy_version="2026-10-11", provider="synthetic-llm", model="synthetic-model-1",
-                  region="test", provider_retention_days=30, gateway_retention_hours=24,
+                  region="test", provider_retention_days=30, provider_flagged_retention_days=730,
+                  provider_trains_on_data=False, provider_storage_region="test", gateway_retention_hours=24,
                   max_input_chars=12000, max_output_tokens=1024, per_user_daily_micro_usd=100_000,
                   global_daily_micro_usd=1_000_000, global_monthly_micro_usd=31_000_000, terms_verified=False)
 

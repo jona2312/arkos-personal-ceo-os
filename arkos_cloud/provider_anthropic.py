@@ -31,7 +31,7 @@ def _loopback_http(url):
 
 
 class AnthropicProvider:
-    def __init__(self, model, api_key, base_url=None, effort=DEFAULT_EFFORT, sdk=None):
+    def __init__(self, model, api_key, base_url=None, effort=DEFAULT_EFFORT, sdk=None, inference_geo="global"):
         """base_url is only for local fakes in tests (http on loopback); production uses the SDK default."""
         if base_url is not None and not _loopback_http(base_url):
             raise ValueError("base_url solo se admite en loopback para pruebas")
@@ -39,6 +39,9 @@ class AnthropicProvider:
             raise ValueError("Falta la credencial del proveedor en el servidor")
         if effort not in ("low", "medium", "high"):
             raise ValueError("effort no permitido para el piloto")
+        if inference_geo not in ("global", "us"):
+            raise ValueError("inference_geo debe ser global o us (lo declarado en el consentimiento)")
+        self.inference_geo = inference_geo
         if sdk is None:
             try:
                 import anthropic as sdk
@@ -64,7 +67,7 @@ class AnthropicProvider:
             response = self._client.messages.create(
                 model=self.model, max_tokens=max_output_tokens, system=system,
                 messages=[{"role": m["role"], "content": m["content"]} for m in messages],
-                output_config={"effort": self.effort}, timeout=float(timeout_s))
+                output_config={"effort": self.effort}, inference_geo=self.inference_geo, timeout=float(timeout_s))
         except sdk.APIConnectionError as exc:  # includes APITimeoutError
             cause = type(exc.__cause__).__name__ if exc.__cause__ is not None else ""
             if cause in ("ConnectError", "ConnectTimeout"):
@@ -84,5 +87,10 @@ class AnthropicProvider:
             text = "".join(block.text for block in response.content if getattr(block, "type", "") == "text")
         except Exception:
             raise ProviderLost() from None
+        # The declared geography must be the one that served the request: a "us" promise answered
+        # elsewhere is discarded (it is still billed). "global" accepts any reported value.
+        served = getattr(usage, "inference_geo", None)
+        if self.inference_geo == "us" and served != "us":
+            return ProviderResult("", tokens_in, tokens_out)
         # refusal / max_tokens: billed per usage; the gateway decides what to show.
         return ProviderResult(text if response.stop_reason != "refusal" else "", tokens_in, tokens_out)
