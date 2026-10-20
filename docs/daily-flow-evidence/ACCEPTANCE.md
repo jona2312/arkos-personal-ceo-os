@@ -23,14 +23,14 @@ Sin acceso Engram en esta sesión: este documento es el handoff saneado.
   Qwen local existente → propuesta del contrato → nota pendiente → rechazo de ejecución
   anticipada y de fingerprint inválido → aprobación → ejecución → archivo exacto
   (con terminador CRLF de Windows).
-- Latencias individuales del segundo ensayo: transcripción 2,941 s; respuesta con
-  propuesta 12,539 s; ejecución observada 0,162 s. No son percentiles ni una validación
+- Latencias individuales del ensayo final: transcripción 2,953 s; respuesta con
+  propuesta 20,752 s; ejecución observada 0,156 s. El ensayo anterior fue 2,941 / 12,539 / 0,162 s. No son percentiles ni una validación
   estadística de rendimiento. El primer ensayo descubrió un error de expectativa LF
   del test y una frase sintética mal codificada; se corrigió el harness, no la cola.
 - Captura descartada libera micrófono; móvil sin desbordamiento. Capturas sin clave.
 - Regresiones sintéticas de navegador del chat existente: PASS, incluyendo cancelación,
   XSS, propuestas, doble clic, estados, relay y presentación. Separadas del modelo real.
-- Siete tests nuevos de backend y prueba Node del ciclo de captura: PASS.
+- Suite local completa: 240 tests, 218 aprobados y 22 omitidos por SDK Cloud ausente; no se instaló. Siete tests nuevos de backend y prueba Node del ciclo de captura: PASS.
 - Los cuatro archivos modificados de Hermes mantienen su diff anterior; no se editaron.
 
 ## Comandos de verificación
@@ -58,3 +58,4 @@ builder usa blobs comprometidos, no archivos sueltos del working tree.
   worker acotado por dictado, sin mantener otro modelo residente.
 - No hay voz de salida, herramientas nuevas, proveedor remoto ni ejecución libre.
 - CI y SHA final se informan en el PR; este registro no presume sus resultados.
+

@@ -336,4 +336,4 @@ html[data-processing=cloud] .processing-where{border-left:3px solid var(--pink);
 .chat-outcome .outcome-detail{display:block;margin-top:6px;color:var(--text)}
 @media (max-width:560px){.cloud-terms{grid-template-columns:1fr;gap:2px}.cloud-terms dd{margin-bottom:8px}.processing-where{flex-basis:100%}}
 
-.dictation-controls{display:flex;flex-wrap:wrap;gap:.6rem;padding:1rem}.dictation-controls p{flex-basis:100%;margin:0;overflow-wrap:anywhere}
+.dictation-controls{grid-column:1/-1;min-width:0;display:flex;flex-wrap:wrap;gap:.6rem;padding:1rem}.dictation-controls p{flex-basis:100%;margin:0;overflow-wrap:anywhere}
