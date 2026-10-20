@@ -20,6 +20,11 @@
       "name": "FFmpeg",
       "requirement": "Optional, clips only; manual",
       "bundled": false
+    },
+    {
+      "name": "Offline dictation",
+      "requirement": "Optional: existing Python with faster-whisper and complete local CTranslate2 Whisper model; manual, no downloads",
+      "bundled": false
     }
   ],
   "files": [
@@ -57,6 +62,10 @@
     "arkos_pilot/web/style.css",
     "PILOT-WINDOWS.md",
     "scripts/Get-ArkosDesktopReadiness.ps1",
-    "scripts/Open-Arkos.ps1"
+    "scripts/Open-Arkos.ps1",
+    "arkos_pilot/dictation.py",
+    "arkos_pilot/dictation_runner.py",
+    "arkos_pilot/web/dictation.js",
+    "docs/LOCAL_DAILY_FLOW.md"
   ]
 }

@@ -1,0 +1,16 @@
+{
+  "audio": "synthetic Windows Sabina, no physical microphone",
+  "model": "existing local Qwen",
+  "steps": [
+    "dictation inserts editable text without sending or creating tasks",
+    "real local model proposal, separate pending/approval/execution, exact output file",
+    "capture discard, mobile no horizontal overflow"
+  ],
+  "stt_seconds": 2.941,
+  "transcript": "Propone una nota para revisar las prioridades de hoy.",
+  "model_seconds": 12.539,
+  "task_id": "bd454b51773040e780c6c75d464847ad",
+  "note": "Revisar las prioridades del día. Prueba local de Jona. No la guardes ni ejecutes.",
+  "execution_seconds": 0.162,
+  "status": "PASS"
+}
