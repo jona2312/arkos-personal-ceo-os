@@ -25,6 +25,11 @@
       "name": "Offline dictation",
       "requirement": "Optional: existing Python with faster-whisper and complete local CTranslate2 Whisper model; manual, no downloads",
       "bundled": false
+    },
+    {
+      "bundled": false,
+      "requirement": "Optional: dictation runtime plus piper-tts and existing voice ONNX/JSON. Manual; no downloads. Hardware acceptance required.",
+      "name": "Offline continuous voice"
     }
   ],
   "files": [
@@ -66,6 +71,10 @@
     "arkos_pilot/dictation.py",
     "arkos_pilot/dictation_runner.py",
     "arkos_pilot/web/dictation.js",
-    "docs/LOCAL_DAILY_FLOW.md"
+    "docs/LOCAL_DAILY_FLOW.md",
+    "arkos_pilot/voice.py",
+    "arkos_pilot/voice_runner.py",
+    "arkos_pilot/web/voice.js",
+    "docs/LOCAL_VOICE.md"
   ]
 }

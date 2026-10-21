@@ -1,0 +1,45 @@
+{
+  "kind": "synthetic component benchmark; no human microphone, no audible verification",
+  "samples": [
+    {
+      "component": "previous_cold_stt",
+      "ms": 5370
+    },
+    {
+      "component": "previous_cold_stt",
+      "ms": 5200
+    },
+    {
+      "component": "previous_cold_stt",
+      "ms": 4955
+    },
+    {
+      "component": "resident_stt",
+      "ms": 2742
+    },
+    {
+      "component": "resident_piper",
+      "ms": 2881,
+      "audio_bytes": 107052
+    },
+    {
+      "component": "resident_stt",
+      "ms": 2651
+    },
+    {
+      "component": "resident_piper",
+      "ms": 624,
+      "audio_bytes": 100908
+    },
+    {
+      "component": "resident_stt",
+      "ms": 2589
+    },
+    {
+      "component": "resident_piper",
+      "ms": 688,
+      "audio_bytes": 110124
+    }
+  ],
+  "warm_ms": 6649
+}

@@ -21,7 +21,7 @@ function harness({deny=false}={}){
     btoa:s=>Buffer.from(s,'binary').toString('base64'),setTimeout:()=>1,clearTimeout(){},
     MutationObserver:class{observe(){}},
     $:node,document:{documentElement:html,hidden:false,addEventListener:(n,f)=>{events[n]=f;}},
-    window:{addEventListener:(n,f)=>{events[n]=f;}},
+    window:{addEventListener:(n,f)=>{events[n]=f;},dispatchEvent(){}},
     navigator:{mediaDevices:{async getUserMedia(){
       requests++;if(deny)throw Error('permission');
       const track={stopped:false,stop(){this.stopped=true;},addEventListener(){}};tracks.push(track);
