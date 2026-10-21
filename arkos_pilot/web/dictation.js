@@ -61,6 +61,7 @@
   }
   start.addEventListener('click',async()=>{
     if(job || !configured || input.disabled || document.documentElement.dataset.processing === 'cloud') return;
+    window.dispatchEvent(new Event('arkos-dictation-start'));
     const j={id:'dict-'+crypto.randomUUID(),phase:'permission',chunks:[],length:0}; job=j;
     show('Solicitando permiso de micrófono…');
     try {
@@ -88,6 +89,7 @@
   stop.addEventListener('click',finish);
   cancel.addEventListener('click',discard);
   window.addEventListener('pagehide',discard);
+  window.addEventListener('arkos-voice-start',discard);
   document.addEventListener('visibilitychange',()=>{if(document.hidden)discard();});
   // Sending or switching modes discards outstanding audio; no late transcript in another conversation.
   $('chat-form').addEventListener('submit',discard);

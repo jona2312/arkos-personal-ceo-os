@@ -1,0 +1,15 @@
+{
+  "kind": "synthetic microphone and model; real local Whisper/Piper; audio not physically verified",
+  "metrics": [
+    {
+      "turn": 1,
+      "voice_end_to_transcript_ms": 22308,
+      "stt_worker_ms": 21527,
+      "first_model_fragment_ms": null,
+      "audible_audio_ms": null,
+      "transcript_to_complete_text_ms": 732,
+      "complete_text_to_playback_start_ms": 482
+    }
+  ],
+  "status": "PASS"
+}

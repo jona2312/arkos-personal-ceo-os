@@ -27,6 +27,7 @@
     $('cloud-cancel-note').hidden = !(current === 'cloud' && pending);
     $('mode-local').disabled = !!pending;
     $('mode-cloud').disabled = !!pending || !(cloudInfo && cloudInfo.configured);
+    window.dispatchEvent(new CustomEvent('arkos-chat-state', {detail:{state:value, mode:current, requestId:pending?.request_id || null}}));
   }
   function message(role, text) {
     const row = element('article', 'chat-message '+role);
@@ -116,6 +117,8 @@
     status(turn.state, label || (turn.state==='ok'?'Respuesta recibida · ejecución de tareas por separado':
       turn.state==='cancelled'?'Conversación cancelada':turn.state==='timeout'?'Tiempo de espera agotado':'Error de conversación'));
     log.scrollTop=log.scrollHeight; input.focus();
+    window.dispatchEvent(new CustomEvent('arkos-chat-result', {detail:{mode:current, requestId:rid,
+      state:turn.state, reply:turn.state==='ok' ? result.reply : ''}}));
   }
   async function poll() {
     if (!pending || polling) return;

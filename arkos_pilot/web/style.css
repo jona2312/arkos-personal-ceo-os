@@ -351,6 +351,10 @@ button,input,textarea,select{font-family:inherit}
 .mic-button svg{flex:none}
 .mic-stop{border-color:var(--pink);font-weight:700}
 .dictation-status{font-size:15px;line-height:1.5;font-weight:550;margin:12px 0 0;color:var(--text);overflow-wrap:anywhere}
+#voice-start,#voice-stop{margin:12px 8px 0 0;font-size:16px;min-height:46px}
+#voice-metrics{white-space:pre-wrap;overflow-wrap:anywhere;font-size:14px}
+html[data-voice="listening"] #voice-status{color:var(--accent);font-weight:700}
+html[data-voice="speaking"] #voice-status{font-weight:700}
 .chat-state,.processing-where,.field-help,.task-card .excerpt,.notice-copy p{font-size:15px;font-weight:500}
 .nav-item,.card-action,.column-heading{font-size:16px;font-weight:600}
 .task-card h3,.list-grid .task-card h3{font-size:18px;font-weight:650}

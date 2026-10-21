@@ -41,7 +41,7 @@ class TaskCenter(ThreadingHTTPServer):
     daemon_threads = True
 
     def __init__(self, state_dir, port=0, relay_snapshot=None, relay_device_id=None, bridge=None, chat_mode='hermes',
-                 cloud=None, dictation=None):
+                 cloud=None, dictation=None, voice=None):
         if (relay_snapshot is None) != (relay_device_id is None) or (relay_device_id is not None and not DEVICE.fullmatch(relay_device_id)):
             raise ValueError("Configurá juntos el snapshot y el ID de dispositivo válido.")
         # Reject unavailable providers before opening a socket or creating state. The local
@@ -55,6 +55,7 @@ class TaskCenter(ThreadingHTTPServer):
                 raise ValueError('Cloud solo se configura con una sesión CloudLink.')
         self.cloud = cloud  # None: Cloud disabled (default)
         self.dictation = dictation  # explicit local runtime only; absent by default
+        self.voice = voice  # fixed offline Whisper/Piper paths; opt-in, no fallback
         self.relay_snapshot = relay_snapshot
         self.relay_device_id = relay_device_id
         self.root = Path(state_dir).resolve()
@@ -67,6 +68,8 @@ class TaskCenter(ThreadingHTTPServer):
         self.chat = Conversations(self.root, bridge, chat_mode)
 
     def server_close(self):
+        if getattr(self, 'voice', None) is not None:
+            self.voice.close()
         if getattr(self, 'dictation', None) is not None:
             self.dictation.close()
         if hasattr(self, 'chat'):
@@ -180,6 +183,12 @@ class Handler(BaseHTTPRequestHandler):
             return
         static = {'/': ('index.html', 'text/html; charset=utf-8'), '/app.js': ('app.js', 'text/javascript; charset=utf-8'), '/neural.js': ('neural.js', 'text/javascript; charset=utf-8'), '/remote-view.js': ('remote-view.js', 'text/javascript; charset=utf-8'), '/style.css': ('style.css', 'text/css; charset=utf-8'), '/mark.svg': ('mark.svg', 'image/svg+xml')}
         try:
+            if path == '/api/voice':
+                self.json(200, {'configured': self.server.voice is not None, 'processing': 'local',
+                                'audio_saved': False, 'tts': 'Piper', 'stt': 'faster-whisper'})
+                return
+            if path == '/voice.js':
+                static[path] = ('voice.js', 'text/javascript; charset=utf-8')
             if path == '/api/dictation':
                 self.json(200, {'configured': self.server.dictation is not None,
                                 'processing': 'local', 'max_seconds': 30, 'audio_saved': False})
@@ -270,7 +279,7 @@ class Handler(BaseHTTPRequestHandler):
             length = int(self.headers.get('Content-Length', '0'))
             path = urlsplit(self.path).path
             limit = 200_000 if path.startswith(('/api/chat', '/api/cloud')) else MAX_BODY
-            if path == '/api/dictation':
+            if path in ('/api/dictation', '/api/voice/transcribe'):
                 limit = 1_281_000  # bounded 30 s mono PCM16 WAV + base64 envelope
             if self.headers.get('Transfer-Encoding') or not 0 < length <= limit:
                 raise ValueError('Pedido vacío o demasiado grande.')
@@ -280,6 +289,11 @@ class Handler(BaseHTTPRequestHandler):
             if not isinstance(data, dict):
                 raise ValueError('Pedido inválido.')
             path = urlsplit(self.path).path
+            if path.startswith('/api/voice/'):
+                if self.server.voice is None:
+                    raise ChatError('Voz local por configurar.', 503)
+                self.json(200, self.server.voice.call(path.removeprefix('/api/voice/'), data))
+                return
             if path in ('/api/dictation', '/api/dictation/cancel'):
                 if self.server.dictation is None:
                     raise ChatError('Dictado local por configurar.', 503)
@@ -383,6 +397,7 @@ def main(argv=None):
     parser.add_argument('--hermes-model', default='')
     parser.add_argument('--dictation-python', type=Path, help='Python existente con faster-whisper; opcional')
     parser.add_argument('--dictation-model', type=Path, help='Directorio local completo; nunca se descarga')
+    parser.add_argument('--voice-piper-model', type=Path, help='ONNX Piper existente; activa voz local con el runtime de dictado')
     parser.add_argument('--cloud-config', type=Path, help='Opcional: configuración Cloud del cliente (sin claves). '
                         'El token del dispositivo se lee de ARKOS_CLOUD_DEVICE_TOKEN.')
     parser.add_argument('--cloud-ca-file', type=Path, help='CA explícita para el gateway Cloud (opcional)')
@@ -394,6 +409,12 @@ def main(argv=None):
                 raise ValueError('Configurá Python y modelo locales de dictado juntos.')
             from .dictation import Dictation
             dictation = Dictation(args.dictation_python, args.dictation_model)
+        voice = None
+        if args.voice_piper_model:
+            if dictation is None:
+                raise ValueError('Voz requiere el Python y modelo de dictado existentes.')
+            from .voice import Voice
+            voice = Voice(args.dictation_python, args.dictation_model, args.voice_piper_model)
         bridge = None
         settings = (args.hermes_python, args.hermes_source, args.hermes_home)
         if any(settings):
@@ -414,7 +435,7 @@ def main(argv=None):
         elif args.cloud_ca_file:
             raise ValueError('Configurá Cloud antes de indicar su CA.')
         server = TaskCenter(args.state_dir, args.port, args.relay_snapshot, args.relay_device_id, bridge=bridge,
-                            cloud=cloud, dictation=dictation)
+                            cloud=cloud, dictation=dictation, voice=voice)
     except (ValueError, OSError) as exc:
         parser.error(str(exc))
     url = f'{server.origin}/#key={server.key}'
