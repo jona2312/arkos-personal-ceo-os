@@ -335,3 +335,23 @@ html[data-processing=cloud] .processing-where{border-left:3px solid var(--pink);
 .chat-outcome .secondary{display:block;margin-top:8px;min-height:40px}
 .chat-outcome .outcome-detail{display:block;margin-top:6px;color:var(--text)}
 @media (max-width:560px){.cloud-terms{grid-template-columns:1fr;gap:2px}.cloud-terms dd{margin-bottom:8px}.processing-where{flex-basis:100%}}
+
+
+/* Readable chat controls: microphone stays next to Send, never below the log. */
+body{font-size:17px;font-weight:450}
+button,input,textarea,select{font-family:inherit}
+#chat-form label{font-size:18px;font-weight:700}
+#chat-input,.chat-message{font-size:18px;font-weight:500;line-height:1.65}
+.chat-message strong,.chat-proposal summary{font-size:16px;font-weight:700}
+.chat-proposal pre{font-size:17px;line-height:1.65}
+.chat-actions{flex-wrap:wrap;gap:10px}
+.chat-actions button{font-size:16px;font-weight:650;min-height:46px}
+.chat-actions .field-help{flex:1 1 180px;font-size:14px;font-weight:500}
+.mic-button{display:inline-flex;align-items:center;justify-content:center;gap:8px;border:1px solid var(--accent);color:var(--text);background:var(--accent-wash)}
+.mic-button svg{flex:none}
+.mic-stop{border-color:var(--pink);font-weight:700}
+.dictation-status{font-size:15px;line-height:1.5;font-weight:550;margin:12px 0 0;color:var(--text);overflow-wrap:anywhere}
+.chat-state,.processing-where,.field-help,.task-card .excerpt,.notice-copy p{font-size:15px;font-weight:500}
+.nav-item,.card-action,.column-heading{font-size:16px;font-weight:600}
+.task-card h3,.list-grid .task-card h3{font-size:18px;font-weight:650}
+@media(max-width:600px){.chat-actions{justify-content:space-between}.chat-actions .field-help{display:none}#chat-input,.chat-message{font-size:18px}.chat-actions button{padding:10px 12px}.dictation-status{font-size:15px}}

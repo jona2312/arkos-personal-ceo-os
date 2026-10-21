@@ -41,7 +41,7 @@ class TaskCenter(ThreadingHTTPServer):
     daemon_threads = True
 
     def __init__(self, state_dir, port=0, relay_snapshot=None, relay_device_id=None, bridge=None, chat_mode='hermes',
-                 cloud=None):
+                 cloud=None, dictation=None):
         if (relay_snapshot is None) != (relay_device_id is None) or (relay_device_id is not None and not DEVICE.fullmatch(relay_device_id)):
             raise ValueError("Configurá juntos el snapshot y el ID de dispositivo válido.")
         # Reject unavailable providers before opening a socket or creating state. The local
@@ -54,6 +54,7 @@ class TaskCenter(ThreadingHTTPServer):
             if not isinstance(cloud, CloudLink):
                 raise ValueError('Cloud solo se configura con una sesión CloudLink.')
         self.cloud = cloud  # None: Cloud disabled (default)
+        self.dictation = dictation  # explicit local runtime only; absent by default
         self.relay_snapshot = relay_snapshot
         self.relay_device_id = relay_device_id
         self.root = Path(state_dir).resolve()
@@ -66,6 +67,8 @@ class TaskCenter(ThreadingHTTPServer):
         self.chat = Conversations(self.root, bridge, chat_mode)
 
     def server_close(self):
+        if getattr(self, 'dictation', None) is not None:
+            self.dictation.close()
         if hasattr(self, 'chat'):
             self.chat.close()
         if getattr(self, 'cloud', None) is not None:
@@ -177,6 +180,12 @@ class Handler(BaseHTTPRequestHandler):
             return
         static = {'/': ('index.html', 'text/html; charset=utf-8'), '/app.js': ('app.js', 'text/javascript; charset=utf-8'), '/neural.js': ('neural.js', 'text/javascript; charset=utf-8'), '/remote-view.js': ('remote-view.js', 'text/javascript; charset=utf-8'), '/style.css': ('style.css', 'text/css; charset=utf-8'), '/mark.svg': ('mark.svg', 'image/svg+xml')}
         try:
+            if path == '/api/dictation':
+                self.json(200, {'configured': self.server.dictation is not None,
+                                'processing': 'local', 'max_seconds': 30, 'audio_saved': False})
+                return
+            if path == '/dictation.js':
+                static[path] = ('dictation.js', 'text/javascript; charset=utf-8')
             if path == '/api/cloud':
                 cloud = self.server.cloud
                 self.json(200, cloud.status() if cloud else {'configured': False, 'processing': 'cloud',
@@ -261,6 +270,8 @@ class Handler(BaseHTTPRequestHandler):
             length = int(self.headers.get('Content-Length', '0'))
             path = urlsplit(self.path).path
             limit = 200_000 if path.startswith(('/api/chat', '/api/cloud')) else MAX_BODY
+            if path == '/api/dictation':
+                limit = 1_281_000  # bounded 30 s mono PCM16 WAV + base64 envelope
             if self.headers.get('Transfer-Encoding') or not 0 < length <= limit:
                 raise ValueError('Pedido vacío o demasiado grande.')
             raw = self.rfile.read(length)
@@ -269,6 +280,16 @@ class Handler(BaseHTTPRequestHandler):
             if not isinstance(data, dict):
                 raise ValueError('Pedido inválido.')
             path = urlsplit(self.path).path
+            if path in ('/api/dictation', '/api/dictation/cancel'):
+                if self.server.dictation is None:
+                    raise ChatError('Dictado local por configurar.', 503)
+                if path.endswith('/cancel'):
+                    if set(data) != {'request_id'} or not isinstance(data['request_id'], str):
+                        raise ValueError('Cancelación inválida.')
+                    self.json(200, self.server.dictation.cancel(data['request_id']))
+                else:
+                    self.json(200, self.server.dictation.transcribe(data))
+                return
             if path == '/api/cloud/consent':
                 if set(data) != {'code'} or not isinstance(data['code'], str):
                     raise ValueError('Consentimiento inválido.')
@@ -360,11 +381,19 @@ def main(argv=None):
     parser.add_argument('--hermes-source', type=Path)
     parser.add_argument('--hermes-home', type=Path, help='Perfil dedicado ya autorizado y existente')
     parser.add_argument('--hermes-model', default='')
+    parser.add_argument('--dictation-python', type=Path, help='Python existente con faster-whisper; opcional')
+    parser.add_argument('--dictation-model', type=Path, help='Directorio local completo; nunca se descarga')
     parser.add_argument('--cloud-config', type=Path, help='Opcional: configuración Cloud del cliente (sin claves). '
                         'El token del dispositivo se lee de ARKOS_CLOUD_DEVICE_TOKEN.')
     parser.add_argument('--cloud-ca-file', type=Path, help='CA explícita para el gateway Cloud (opcional)')
     args = parser.parse_args(argv)
     try:
+        dictation = None
+        if args.dictation_python or args.dictation_model:
+            if not (args.dictation_python and args.dictation_model):
+                raise ValueError('Configurá Python y modelo locales de dictado juntos.')
+            from .dictation import Dictation
+            dictation = Dictation(args.dictation_python, args.dictation_model)
         bridge = None
         settings = (args.hermes_python, args.hermes_source, args.hermes_home)
         if any(settings):
@@ -385,7 +414,7 @@ def main(argv=None):
         elif args.cloud_ca_file:
             raise ValueError('Configurá Cloud antes de indicar su CA.')
         server = TaskCenter(args.state_dir, args.port, args.relay_snapshot, args.relay_device_id, bridge=bridge,
-                            cloud=cloud)
+                            cloud=cloud, dictation=dictation)
     except (ValueError, OSError) as exc:
         parser.error(str(exc))
     url = f'{server.origin}/#key={server.key}'
