@@ -59,3 +59,12 @@ builder usa blobs comprometidos, no archivos sueltos del working tree.
 - No hay voz de salida, herramientas nuevas, proveedor remoto ni ejecución libre.
 - CI y SHA final se informan en el PR; este registro no presume sus resultados.
 
+
+## Legibilidad y micrófono — 21 de octubre
+
+El botón con icono de micrófono y etiqueta «Dictar» está dentro del formulario,
+junto a Enviar; detener y descartar aparecen en esa misma zona. Mensajes y campo
+usan 18 px y mayor peso. No cambia el motor ni activa el micrófono por sí solo.
+Prueba de navegador sintética PASS en escritorio y móvil, incluyendo aserción de
+micrófono visible dentro del chat y tamaño calculado de 18 px. Capturas
+microphone-readable-* corresponden al runner sintético, no a otra llamada a Qwen.

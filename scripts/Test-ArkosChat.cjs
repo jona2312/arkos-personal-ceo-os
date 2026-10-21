@@ -28,6 +28,9 @@ async function main(){
   await page.goto(url);
   await page.getByText('Listo para conversar',{exact:true}).waitFor();
   assert.match(await page.locator('#chat-mode').textContent(),/PRUEBA SINTÉTICA/);
+  assert.ok(await page.locator('#chat-form #dictate').isVisible(), 'Microphone must be visible inside the chat');
+  assert.equal(await page.locator('#dictate svg').count(),1);
+  assert.equal(await page.locator('#chat-input').evaluate(e=>getComputedStyle(e).fontSize),'18px');
   const geometry=await page.evaluate(()=>({width:innerWidth,scroll:document.documentElement.scrollWidth,scale:visualViewport.scale,dpr:devicePixelRatio}));
   assert.equal(geometry.width,1512);assert.equal(geometry.scale,1);assert.ok(geometry.scroll<=1512);
   await page.getByRole('button',{name:'Personalizar apariencia',exact:true}).click();
