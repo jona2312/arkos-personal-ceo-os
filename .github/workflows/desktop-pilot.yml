@@ -35,3 +35,4 @@ jobs:
             if ($parseErrors.Count) { throw ($parseErrors | Out-String) }
           }
           ./scripts/Get-ArkosDesktopReadiness.ps1
+          ./scripts/Get-ArkosWakeReadiness.ps1
