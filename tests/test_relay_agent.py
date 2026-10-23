@@ -158,8 +158,46 @@ class AgentTests(RelayFixture, unittest.TestCase):
         task = self.approved_note()
         self.agent.clock = lambda: self.clock() + 7200  # PC clock ahead of approval expiry
         self.agent.run_once()
-        self.assertEqual(self.state(task)["state"], c.FAILED)
+        # Not started and not reported as failed: same outcome as the server gate (contract §2).
+        self.assertEqual(self.state(task)["state"], c.CLAIMED)
+        self.assertEqual(self.journal.get(task["id"])["phase"], "abandoned")
+        self.clock.advance(121)  # claim lease lapses; for the relay the approval is still valid
+        self.assertEqual((self.state(task)["state"], self.state(task)["state_reason"]), (c.APPROVED, "lease_expired_before_start"))
+        self.clock.advance(3600)  # now it is expired for the relay too
+        self.assertEqual((self.state(task)["state"], self.state(task)["state_reason"]), (c.AWAITING_APPROVAL, "approval_expired"))
         self.assertEqual(self.outputs(), [])
+
+    def test_failure_messages_never_carry_local_paths(self):
+        params = {"root": "videos", "path": "carpeta privada/no existe.mp4", "start_ms": 0, "duration_ms": 1000}
+        task = self.create(self.alice_token, action="video.clip", params=params, request_id="req-missing-clip")[1]["task"]
+        self.approve(self.alice_token, task)
+        self.agent.run_once()
+        final = self.state(task)
+        self.assertEqual(final["state"], c.FAILED)
+        self.assertNotIn(str(self.dir), json.dumps(final, ensure_ascii=False))
+        self.assertNotIn("carpeta privada", final["result"]["message"])
+
+    def test_ffmpeg_output_is_not_forwarded(self):
+        class NoisyExecutor(ag.Executor):
+            def run(self, task_id, action, params):
+                raise RuntimeError("Error opening input file C:\\Users\\Jona\\My Videos\\cumple de Ana.mp4")
+        self.agent.executor = NoisyExecutor(self.dir / "outputs", {})
+        task = self.approved_note(request_id="req-ffmpeg-noise")
+        self.agent.run_once()
+        final = self.state(task)
+        self.assertEqual(final["state"], c.UNKNOWN)
+        for leaked in ("Users", "Jona", "Ana", "Videos"):
+            self.assertNotIn(leaked, final["result"]["message"])
+
+    def test_relay_redacts_paths_from_older_agents(self):
+        task = self.approved_note(request_id="req-old-agent")
+        claimed = self.transport("POST", "/v1/agent/claim", {"max_tasks": 1})["tasks"][0]
+        self.transport("POST", f"/v1/agent/tasks/{task['id']}/start", {"lease_id": claimed["lease_id"], "payload_sha256": task["payload_sha256"]})
+        self.transport("POST", f"/v1/agent/tasks/{task['id']}/complete", {"lease_id": claimed["lease_id"], "outcome": "unknown",
+                       "result": {"message": "OSError: [Errno 28] No space left: '/home/jona/Mis documentos/x.md'"}})
+        final = self.state(task)
+        self.assertEqual(final["result"]["message"], "OSError: [Errno 28] No space left: '<ruta local>'")
+        self.assertNotIn("jona", final["state_reason"])
 
     def test_clip_outside_allowed_root_is_refused(self):
         outside = self.dir / "secret.mp4"

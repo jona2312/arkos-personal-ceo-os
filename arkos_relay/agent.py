@@ -109,6 +109,23 @@ class Journal:
         self.db.close()
 
 
+redact_paths = c.redact_local_paths
+
+
+def describe_error(exc):
+    """Text that may leave the PC for an exception: our own messages, never OS or FFmpeg output.
+
+    OS errors and subprocess output embed absolute paths and file names (possibly with spaces);
+    only the error class and errno travel. The full detail stays in the local log."""
+    if isinstance(exc, (c.ContractError,)) or type(exc) is ValueError:
+        return redact_paths(str(exc))
+    if isinstance(exc, OSError):
+        return f"{type(exc).__name__} (errno {exc.errno})" if exc.errno is not None else type(exc).__name__
+    if isinstance(exc, RuntimeError):
+        return f"{type(exc).__name__}: el proceso externo terminó con error (detalle en el registro local de la PC)"
+    return type(exc).__name__
+
+
 def sha256_bytes(data):
     return hashlib.sha256(data).hexdigest()
 
@@ -180,6 +197,9 @@ class Executor:
         return None
 
 
+APPROVAL_EXPIRED = "Aprobación vencida"
+
+
 class Agent:
     def __init__(self, transport, device_id, journal, executor, clock=time.time, log=None):
         self.call, self.device_id, self.journal, self.executor, self.clock = transport, device_id, journal, executor, clock
@@ -201,6 +221,13 @@ class Agent:
     def process(self, task):
         self.journal.put(task, "claimed")
         problem = self.local_check(task)
+        if problem is APPROVAL_EXPIRED:
+            # Same outcome as the server gate: no effect, the task must be approved again. Not "failed".
+            # Without a start call the claim lease lapses and the relay returns it to awaiting_approval
+            # (or to approved if only this PC's clock is ahead); nothing is reported from here.
+            self.log(f"{task['id']}: aprobación vencida según el reloj de esta PC; no se inicia")
+            self.journal.phase(task["id"], "abandoned")
+            return
         if problem:
             self.log(f"{task['id']}: rechazada localmente: {problem}")
             self.journal.phase(task["id"], "done_local", c.FAILED, {"message": problem})
@@ -230,26 +257,32 @@ class Agent:
         if task["target_device_id"] not in (None, self.device_id):
             return "La tarea es para otro dispositivo"
         if not approval.get("expires_at") or approval["expires_at"] <= self.clock():
-            return "Aprobación vencida"
+            return APPROVAL_EXPIRED
         try:
             self.executor.preflight(task["action"], task["params"])
         except (ValueError, OSError) as exc:
-            return str(exc)
+            self.log(f"{task['id']}: verificación previa: {exc!r}")
+            return describe_error(exc)
         return None
 
     def execute(self, task_id, action, params):
         try:
             return c.SUCCEEDED, self.executor.run(task_id, action, params)
         except (ValueError, FileNotFoundError) as exc:
-            return c.FAILED, {"message": str(exc)[:2000]}
+            self.log(f"{task_id}: falló sin efecto: {exc!r}")
+            return c.FAILED, {"message": describe_error(exc)[:2000]}
         except (RuntimeError, subprocess.TimeoutExpired, OSError, Exception) as exc:
-            return c.UNKNOWN, {"message": f"Resultado incierto: {type(exc).__name__}: {str(exc)[:1500]}"}
+            self.log(f"{task_id}: resultado incierto: {exc!r}")
+            return c.UNKNOWN, {"message": f"Resultado incierto: {describe_error(exc)[:1500]}"}
 
     def report(self, task_id):
         job = self.journal.get(task_id)
+        result = json.loads(job["result"] or "{}")
+        if "message" in result:
+            result["message"] = redact_paths(result["message"])  # also covers journals written by older agents
         try:
             self.call("POST", f"/v1/agent/tasks/{task_id}/complete",
-                      {"lease_id": job["lease_id"], "outcome": job["outcome"], "result": json.loads(job["result"] or "{}")})
+                      {"lease_id": job["lease_id"], "outcome": job["outcome"], "result": result})
         except ApiError as exc:
             if exc.status in (401, 429) or exc.status >= 500:
                 raise

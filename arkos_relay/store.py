@@ -67,6 +67,10 @@ class RelayError(Exception):
         self.status, self.code, self.message = status, code, message
 
 
+# The agent polls every 20 s by default (backoff up to 5 min when the relay is unreachable).
+PRESENCE_SECONDS = 90
+
+
 def not_found():
     # Same answer for "missing" and "belongs to someone else": no existence oracle.
     return RelayError(404, "not_found", "Recurso inexistente")
@@ -139,9 +143,11 @@ class Store:
         for task in self.db.execute("SELECT * FROM tasks WHERE state=? AND lease_expires_at < ?", (c.RUNNING, now)).fetchall():
             # Started and silent: the effect may or may not exist. Keep the lease id so a late report is accepted.
             self._transition(task, c.UNKNOWN, "system", "lease_expired_during_execution")
-        for task in self.db.execute("SELECT * FROM tasks WHERE state=?", (c.APPROVED,)).fetchall():
+        for task in self.db.execute("SELECT * FROM tasks WHERE state IN (?,?)", (c.APPROVED, c.CLAIMED)).fetchall():
+            # Claimed means "not started": no effect yet, so an expired approval releases the lease at once.
             if not self._valid_approval(task, now):
-                self._transition(task, c.AWAITING_APPROVAL, "system", "approval_expired")
+                # lease_device_id is kept so the PC that held the lease gets "approval_expired", not 404.
+                self._transition(task, c.AWAITING_APPROVAL, "system", "approval_expired", lease_id=None, lease_expires_at=None)
 
     def _valid_approval(self, task, now):
         return self.db.execute(
@@ -244,9 +250,19 @@ class Store:
         return {"device_id": device_id, "device_token": token, "user_id": row["user_id"], "name": row["device_name"]}
 
     def list_devices(self, user_id):
+        now = self.clock()
         with self.lock:
             rows = self.db.execute("SELECT id, name, created_at, last_seen_at, revoked_at FROM devices WHERE user_id=? ORDER BY created_at", (user_id,))
-            return [dict(r) for r in rows]
+            return [dict(r, presence=self.presence(r, now)) for r in rows]
+
+    @staticmethod
+    def presence(device, now):
+        """What the phone may tell the user. 'online' only means the agent called recently, not that it is idle."""
+        if device["revoked_at"]:
+            return "revoked"
+        if device["last_seen_at"] is None:
+            return "never_seen"
+        return "online" if now - device["last_seen_at"] <= PRESENCE_SECONDS else "offline"
 
     def revoke_device(self, user_id, device_id):
         with self.tx() as db:
@@ -354,7 +370,7 @@ class Store:
 
     def get_task(self, user_id, task_id, with_events=False):
         with self.tx():
-            task = self.public_task(self._task(user_id, task_id))
+            task = self._user_view(self._task(user_id, task_id))
             if with_events:
                 task["events"] = [dict(r) for r in self.db.execute(
                     "SELECT at, actor, from_state, to_state, detail FROM task_events WHERE task_id=? ORDER BY id", (task_id,))]
@@ -364,7 +380,14 @@ class Store:
         with self.tx() as db:
             rows = db.execute("SELECT * FROM tasks WHERE user_id=? AND version>? ORDER BY version LIMIT ?",
                               (user_id, int(after_version), max(1, min(int(limit), 500)))).fetchall()
-            return [self.public_task(r) for r in rows]
+            return [self._user_view(r) for r in rows]
+
+    def _user_view(self, row):
+        """Task as the owner sees it: adds when the current approval stops being valid (phone shows it)."""
+        task = self.public_task(row)
+        approval = self._valid_approval(row, self.clock()) if row["state"] in (c.APPROVED, c.CLAIMED) else None
+        task["approval_expires_at"] = approval["expires_at"] if approval else None
+        return task
 
     def find_by_prefix(self, user_id, prefix):
         with self.tx() as db:
@@ -387,7 +410,7 @@ class Store:
             db.execute("INSERT INTO approvals VALUES (?,?,?,?,?,?,?,NULL,NULL)",
                        (approval_id, task_id, user_id, payload_sha256, channel, now, now + ttl_seconds))
             self._transition(task, c.APPROVED, f"{channel}:{user_id}", f"approval:{approval_id}")
-            return self.public_task(self._task(user_id, task_id))
+            return self._user_view(self._task(user_id, task_id))
 
     def reject(self, user_id, task_id):
         return self._user_close(user_id, task_id, (c.AWAITING_APPROVAL,), c.REJECTED)
@@ -470,6 +493,13 @@ class Store:
         now = self.clock()
         expired = False
         with self.tx() as db:
+            released = db.execute("SELECT state, state_reason FROM tasks WHERE id=? AND user_id=? AND lease_device_id=?",
+                                  (task_id, user_id, device_id)).fetchone()
+            if released and (released["state"], released["state_reason"]) == (c.AWAITING_APPROVAL, "approval_expired"):
+                expired = True  # the sweep at the start of this transaction already released it
+        if expired:
+            raise conflict("approval_expired", "La aprobación venció o fue revocada; se requiere una nueva")
+        with self.tx() as db:
             task = self._leased(user_id, device_id, task_id, lease_id)
             if task["state"] == c.RUNNING:
                 return self.public_task(task)  # retried start after a lost response
@@ -495,6 +525,8 @@ class Store:
         if outcome not in c.DEVICE_OUTCOMES:
             raise RelayError(400, "invalid_outcome", "outcome debe ser succeeded, failed o unknown")
         result = c.validate_result(result)
+        if "message" in result:
+            result["message"] = c.redact_local_paths(result["message"])  # defense in depth: older or foreign agents
         result_sha = hashlib.sha256(c.canonical({"outcome": outcome, "result": result})).hexdigest()
         with self.tx():
             task = self._leased(user_id, device_id, task_id, lease_id)

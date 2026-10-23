@@ -1,5 +1,6 @@
 """WSGI API for the relay. Stdlib only; run behind a TLS-terminating proxy."""
 import json
+from pathlib import Path
 import re
 import threading
 import time
@@ -9,6 +10,16 @@ from .contract import ContractError
 from .store import RelayError
 
 MAX_BODY = 256 * 1024
+PHONE_DIR = Path(__file__).resolve().parent / "phone"
+PHONE_FILES = {"index.html": "text/html; charset=utf-8", "app.js": "text/javascript; charset=utf-8",
+               "app.css": "text/css; charset=utf-8"}
+# Same-origin only, no inline code, no framing. Applies to JSON responses as well.
+SECURITY_HEADERS = [
+    ("Cache-Control", "no-store"), ("X-Content-Type-Options", "nosniff"), ("X-Frame-Options", "DENY"),
+    ("Referrer-Policy", "no-referrer"),
+    ("Content-Security-Policy", "default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; "
+                                "img-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'"),
+]
 
 
 class FailureThrottle:
@@ -58,7 +69,7 @@ class App:
                   405: "Method Not Allowed", 409: "Conflict", 413: "Payload Too Large", 415: "Unsupported Media Type",
                   429: "Too Many Requests"}.get(status, "Error")
         start_response(f"{status} {reason}", [("Content-Type", content_type), ("Content-Length", str(len(payload))),
-                                              ("Cache-Control", "no-store"), ("X-Content-Type-Options", "nosniff")])
+                                              *SECURITY_HEADERS])
         return [payload]
 
     def dispatch(self, environ):
@@ -158,6 +169,22 @@ def healthz(app, req):
     return {"ok": True, "contract_version": CONTRACT_VERSION}
 
 
+# --- phone web client (static; the user token never appears in a URL) --------------
+
+@route("GET", "/m/?", None)
+def phone_index(app, req):
+    return _phone_file("index.html")
+
+
+@route("GET", r"/m/(?P<name>app\.js|app\.css)", None)
+def phone_asset(app, req):
+    return _phone_file(req.args["name"])
+
+
+def _phone_file(name):
+    return 200, (PHONE_DIR / name).read_bytes(), PHONE_FILES[name]
+
+
 @route("POST", "/v1/pair", None)
 def pair(app, req):
     client = req.environ.get("REMOTE_ADDR", "?")
@@ -184,7 +211,7 @@ def pairing_code(app, req):
 
 @route("GET", "/v1/devices", "user")
 def devices(app, req):
-    return {"devices": app.store.list_devices(req.user_id)}
+    return {"devices": app.store.list_devices(req.user_id), "server_time": app.store.clock()}
 
 
 @route("POST", r"/v1/devices/(?P<device_id>dev_[0-9a-f]{32})/revoke", "user")

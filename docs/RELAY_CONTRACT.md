@@ -29,7 +29,7 @@ Celular / WhatsApp ──HTTPS──▶ Relay (API + SQLite) ◀──HTTPS sali
 | Código de vinculación | 12 caracteres `XXXX-XXXX-XXXX`, 10 min | Un solo uso; 10 fallos por IP cada 10 min → 429. |
 | Tarea | `id` (`tsk_…`), `client_request_id`, `action`, `params`, `target_device_id`, `payload_sha256`, `state`, `state_reason`, `lease_id`, `attempts`, `result`, `version` | `UNIQUE(user_id, client_request_id)` = deduplicación. |
 | Aprobación | `id` (`apr_…`), `task_id`, `payload_sha256`, `expires_at` (≤ 24 h), `consumed_at`, `revoked_at` | De un solo uso; se consume en `start`. |
-| Resultado | `{message, output: {name, sha256, bytes, source_sha256?}}` | Solo metadatos: sin contenido ni rutas absolutas. |
+| Resultado | `{message, output: {name, sha256, bytes, source_sha256?}}` | Solo metadatos: sin contenido ni rutas absolutas. Fuera de la PC no sale texto de errores del sistema ni de FFmpeg: solo la clase y el `errno`; el detalle queda en el registro local. Además, el agente y el relay reemplazan cualquier ruta absoluta por `<ruta local>`. |
 | Evento | `at, actor, from_state, to_state, detail` | Auditoría permanente por tarea. |
 
 ### Acciones v1 (lista cerrada; todo lo demás → 400)
@@ -73,6 +73,13 @@ Garantías y no-garantías:
   ejecución automática por aprobación*. La aprobación se consume en `start` y un
   `unknown` nunca se reintenta solo.
 - `claimed` con lease vencido vuelve a `approved`, porque todavía no hubo efecto.
+- `claimed` cuya aprobación vence (o es revocada) vuelve **en ese momento** a `awaiting_approval`
+  con motivo `approval_expired`, y se libera la reserva. Da igual qué compuerta lo detecte:
+  - si es el servidor en `start`, responde 409 `approval_expired`;
+  - si es el agente por su reloj, no llama a `start` ni informa `failed`; abandona el trabajo y el
+    relay decide.
+
+  En ningún caso hay efecto ni estado `failed` por un vencimiento.
 - `running` con lease vencido pasa a `unknown`. Si después llega un informe real del
   agente, se acepta y la tarea queda resuelta.
 - `retry` sobre `unknown` exige `acknowledge_possible_duplicate: true` y una nueva
@@ -92,10 +99,11 @@ uno inexistente.
 | `POST /v1/pair` `{code}` | — | La PC canjea el código → `{device_id, device_token}` |
 | `GET /v1/me` | usuario | |
 | `POST /v1/devices/pairing-codes` `{device_name}` | usuario | Código de 10 min |
-| `GET /v1/devices` · `POST /v1/devices/{id}/revoke` | usuario | Revocar libera `claimed` y marca `running` como `unknown` |
+| `GET /v1/devices` · `POST /v1/devices/{id}/revoke` | usuario | Incluye `presence` (`online` si el agente llamó hace ≤ 90 s, `offline`, `never_seen`, `revoked`) y `server_time`. Revocar libera `claimed` y marca `running` como `unknown` |
 | `POST /v1/tasks` `{client_request_id, action, params, target_device_id?}` | usuario | 201 nueva · 200 `deduplicated:true` · 409 mismo id con otro contenido |
 | `GET /v1/tasks?after_version=N&limit=` | usuario | Sincronización incremental (`next_after_version`) |
-| `GET /v1/tasks/{id}` | usuario | Incluye `events` |
+| `GET /v1/tasks/{id}` | usuario | Incluye `events`. Las vistas del usuario agregan `approval_expires_at` (aprobación vigente, si la hay) |
+| `GET /m/` | — | Cliente web del celular (estático, sin secretos); ver [RELAY_PHONE_FLOW.md](RELAY_PHONE_FLOW.md) |
 | `POST /v1/tasks/{id}/approve` `{payload_sha256, ttl_seconds≤86400}` | usuario | 409 `payload_mismatch` si no coincide |
 | `POST /v1/tasks/{id}/reject` · `/cancel` | usuario | |
 | `POST /v1/tasks/{id}/resolve` `{outcome, note?}` | usuario | Solo desde `unknown` |
