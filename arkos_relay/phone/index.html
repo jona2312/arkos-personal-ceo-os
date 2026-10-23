@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="referrer" content="no-referrer">
+<title>ARKOS · Encargos a la PC</title>
+<link rel="stylesheet" href="/m/app.css">
+<script src="/m/app.js" defer></script>
+</head>
+<body>
+<header class="bar">
+  <h1>ARKOS</h1>
+  <button id="logout" class="link" hidden>Salir</button>
+</header>
+
+<main>
+  <section id="login" class="card" hidden>
+    <h2>Conectar este celular</h2>
+    <p class="muted">Pegá el token de usuario (<code>aku_…</code>) que te dio el operador del relay. No se envía en ninguna URL.</p>
+    <form id="login-form">
+      <label for="token">Token</label>
+      <input id="token" type="password" autocomplete="off" spellcheck="false" required>
+      <label class="check"><input id="remember" type="checkbox"> Recordar en este celular</label>
+      <p class="muted small">Sin marcar, se olvida al cerrar la pestaña. Marcado, queda guardado en este navegador hasta que toques "Salir".</p>
+      <button type="submit">Entrar</button>
+      <p id="login-error" class="error" role="alert"></p>
+    </form>
+  </section>
+
+  <section id="app" hidden>
+    <div id="pc" class="card pc" aria-live="polite">
+      <span id="pc-dot" class="dot"></span>
+      <div>
+        <strong id="pc-name">PC</strong>
+        <div id="pc-state" class="muted small"></div>
+      </div>
+    </div>
+
+    <form id="new" class="card">
+      <h2>Nueva nota para la PC</h2>
+      <label for="note">Texto</label>
+      <textarea id="note" rows="4" maxlength="100000" required></textarea>
+      <label for="target" id="target-label" hidden>PC de destino</label>
+      <select id="target" hidden></select>
+      <button type="submit">Dejar encargo</button>
+      <p class="muted small">Se guarda en la cola aunque la PC esté apagada. No se ejecuta hasta que lo apruebes.</p>
+      <p id="new-error" class="error" role="alert"></p>
+    </form>
+
+    <section id="review" class="card review" hidden>
+      <h2>Revisar y aprobar</h2>
+      <p class="muted small">Esto es exactamente lo que la PC va a ejecutar. La huella se calcula en este celular con lo que ves.</p>
+      <dl>
+        <dt>Acción</dt><dd id="r-action"></dd>
+        <dt>Destino</dt><dd id="r-target"></dd>
+        <dt>Contenido</dt><dd><pre id="r-text"></pre></dd>
+        <dt>Huella</dt><dd><code id="r-digest"></code></dd>
+      </dl>
+      <label for="ttl">La aprobación vale</label>
+      <select id="ttl">
+        <option value="3600">1 hora</option>
+        <option value="28800" selected>8 horas</option>
+        <option value="86400">24 horas</option>
+      </select>
+      <div class="row">
+        <button id="r-approve">Aprobar este contenido</button>
+        <button id="r-close" class="secondary">Volver</button>
+      </div>
+      <p id="review-error" class="error" role="alert"></p>
+    </section>
+
+    <details id="pcs" class="card">
+      <summary>PCs vinculadas</summary>
+      <ul id="devices" class="devices"></ul>
+      <form id="pair-form">
+        <label for="pc-name-input">Vincular otra PC</label>
+        <input id="pc-name-input" type="text" maxlength="80" placeholder="Nombre de la PC" required>
+        <button type="submit" class="secondary">Generar código</button>
+      </form>
+      <p id="pair-code" class="small" aria-live="polite"></p>
+    </details>
+
+    <h2 class="section">Encargos</h2>
+    <p id="sync" class="muted small"></p>
+    <ul id="tasks" class="tasks"></ul>
+  </section>
+</main>
+</body>
+</html>
