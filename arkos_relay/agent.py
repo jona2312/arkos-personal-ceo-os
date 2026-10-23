@@ -10,6 +10,7 @@ import hashlib
 import json
 import os
 from pathlib import Path
+import re
 import sqlite3
 import subprocess
 import time
@@ -107,6 +108,14 @@ class Journal:
 
     def close(self):
         self.db.close()
+
+
+_LOCAL_PATH = re.compile(r"""(?:(?<!\w)[A-Za-z]:[\\/]|\\\\|(?<![\w.:/])/)[^\s'"<>|]*""")
+
+
+def redact_paths(text):
+    """Results leave the PC: never include local absolute paths (user names, folder layout)."""
+    return _LOCAL_PATH.sub("<ruta local>", text)
 
 
 def sha256_bytes(data):
@@ -241,9 +250,9 @@ class Agent:
         try:
             return c.SUCCEEDED, self.executor.run(task_id, action, params)
         except (ValueError, FileNotFoundError) as exc:
-            return c.FAILED, {"message": str(exc)[:2000]}
+            return c.FAILED, {"message": redact_paths(str(exc))[:2000]}
         except (RuntimeError, subprocess.TimeoutExpired, OSError, Exception) as exc:
-            return c.UNKNOWN, {"message": f"Resultado incierto: {type(exc).__name__}: {str(exc)[:1500]}"}
+            return c.UNKNOWN, {"message": f"Resultado incierto: {type(exc).__name__}: {redact_paths(str(exc))[:1500]}"}
 
     def report(self, task_id):
         job = self.journal.get(task_id)
