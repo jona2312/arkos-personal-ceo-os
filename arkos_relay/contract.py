@@ -39,6 +39,19 @@ _FILENAME = re.compile(r"^[A-Za-z0-9][A-Za-z0-9 _.-]{0,79}\.(md|txt)$")
 _HEX64 = re.compile(r"^[0-9a-f]{64}$")
 
 
+# Local absolute paths (user names, folder layout) must never leave the PC. Quoted paths are
+# removed whole because they may contain spaces; unquoted ones up to the first whitespace.
+_QUOTED_PATH = re.compile(r"""(['"])(?:(?<!\w)[A-Za-z]:[\\/]|\\\\|/)[^'"\n]*\1""")
+_BARE_PATH = re.compile(r"""(?:(?<!\w)[A-Za-z]:[\\/]|\\\\|(?<![\w.:/])/)[^\s'"<>|]*""")
+
+
+def redact_local_paths(text):
+    if not isinstance(text, str):
+        return text
+    text = _QUOTED_PATH.sub(lambda m: m.group(1) + "<ruta local>" + m.group(1), text)
+    return _BARE_PATH.sub("<ruta local>", text)
+
+
 class ContractError(ValueError):
     """Input does not satisfy the shared contract."""
 

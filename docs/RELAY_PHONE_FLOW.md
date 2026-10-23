@@ -20,7 +20,7 @@ Celular (/m/)                 Relay (cola SQLite)                  Agente Window
 | Cliente del celular | Solo API | `GET /m/`: crear nota, revisar y aprobar con huella calculada en el celular, seguir el estado, resolver inciertos, reintentar, vincular y revocar PCs |
 | "¿La PC está disponible?" | `last_seen_at` crudo | `presence` en `/v1/devices`: `online` (llamó hace ≤ 90 s), `offline`, `never_seen`, `revoked` |
 | Vencimiento visible | No | `approval_expires_at` en las vistas del usuario |
-| Mensajes de error del agente | Podían incluir rutas absolutas de la PC | Se reemplazan por `<ruta local>` (defecto encontrado en esta rama) |
+| Mensajes de error del agente | Podían incluir rutas absolutas y nombres de archivos de la PC (errores del sistema, verificación previa, FFmpeg) | Solo viajan mensajes propios, la clase y el `errno`. El agente y el relay además redactan cualquier ruta |
 | Encendido remoto | — | Solo diagnóstico: `scripts/Get-ArkosWakeReadiness.ps1` (sección 4) |
 
 ## 1. Lo que ve el celular en cada estado
@@ -35,8 +35,9 @@ Celular (/m/)                 Relay (cola SQLite)                  Agente Window
 | `failed` | "No se produjo ningún efecto" + motivo | Crear de nuevo (pide nueva aprobación) |
 | `unknown` | "La PC empezó pero no pudo confirmar. No se repite sola" | "Ya revisé la PC" → Sí se creó / No se creó · Crear de nuevo (exige "Entiendo que puede quedar duplicado") |
 
-Si la aprobación vence **entre la reserva y el inicio**, el agente la rechaza localmente, no ejecuta y la tarea
-queda `failed` ("Aprobación vencida"). Se vuelve a crear desde el celular.
+Si la aprobación vence **entre la reserva y el inicio**, la tarea vuelve a "Pendiente de aprobación" con el
+motivo de vencimiento, sin efecto, y se aprueba de nuevo. Esto pasa igual la detecte el relay o el reloj de la
+PC. (#22 la dejaba en `failed` cuando la detectaba el agente; lo corrigió la integración #23.)
 
 ## 2. Seguridad del cliente
 
@@ -62,9 +63,10 @@ queda `failed` ("Aprobación vencida"). Se vuelve a crear desde el celular.
 | Corte durante el informe | Efecto hecho, respuesta perdida, red caída; al reconectar se reenvía el mismo informe; un solo archivo |
 | Reinicio del relay | La cola sobrevive |
 | Aprobación vencida con la PC apagada | Nunca se ejecuta; vuelve a "pendiente" con motivo; re-aprobada se ejecuta una vez |
-| Vence entre reserva e inicio | El agente no inicia; `failed` sin efecto |
+| Vence entre reserva e inicio | Vuelve a pendiente sin efecto, sea por la compuerta del relay o la del agente; re-aprobada se ejecuta una vez |
+| Consultar | Presencia, lista, detalle, visor y página: nunca reservan, ejecutan ni cambian la versión, y no hacen aparecer la PC como conectada |
 | Resultado incierto (la PC muere a mitad) | `running` → `unknown` al vencer el lease; al volver no se re-ejecuta; reintento exige reconocer el duplicado y una aprobación nueva |
-| Rutas locales | Un error de disco no publica rutas de la PC |
+| Rutas locales | Ni errores de disco, ni verificación previa (archivo inexistente), ni la salida de FFmpeg, ni informes de agentes viejos publican rutas o nombres de la PC |
 | Página | Cabeceras estrictas, sin sumideros de HTML dinámico, sin rutas fuera de `/m/` |
 | Contrato JS ↔ Python | Mismos bytes canónicos (comillas, barras, controles, emoji, U+2028, enteros); floats rechazados; mensajes por estado |
 
@@ -101,7 +103,7 @@ Todo corre en `127.0.0.1` con datos sintéticos, en una carpeta nueva fuera de `
 git clone https://github.com/jona2312/arkos-personal-ceo-os.git C:\arkos-phone-test
 cd C:\arkos-phone-test
 git checkout claude/arkos-relay-phone-flow
-python -m unittest tests.test_relay_phone_flow -v          # 13 pruebas, sin red externa
+python -m unittest tests.test_relay_phone_flow -v          # 15 pruebas, sin red externa
 
 # 1) Relay local y usuario de prueba
 python -m arkos_relay admin --db $env:TEMP\arkos-phone\relay.sqlite3 create-user --name "Prueba"   # copiar "token"

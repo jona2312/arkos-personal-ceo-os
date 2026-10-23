@@ -220,11 +220,29 @@ class PhoneFlowTests(unittest.TestCase):
         agent = self.pc()
         claimed = self.transport("POST", "/v1/agent/claim", {"max_tasks": 1})["tasks"]
         self.clock.advance(61)
-        agent.process(claimed[0])  # local check sees the approval expired: no start, no effect
-        self.assertEqual(self.executor.runs, [])
-        refused = self.phone.task(task["id"])
-        self.assertEqual((refused["state"], refused["result"]["message"]), (c.FAILED, "Aprobación vencida"))
+        self.assertEqual(self.phone.task(task["id"])["state"], c.AWAITING_APPROVAL)  # claimed, not started: released at once
+        agent.process(claimed[0])  # local check sees the approval expired: no start, no report, no effect
+        status = self.phone.task(task["id"])
+        self.assertEqual((status["state"], status["state_reason"], status["result"]), (c.AWAITING_APPROVAL, "approval_expired", None))
         self.assertFalse(self.output(task["id"]).exists())
+        self.assertEqual(self.phone.approve(status)[0], 200)  # same as the server-gate path: approve again
+        self.pc().run_once()
+        self.assertEqual(self.executor.runs, [task["id"]])
+
+    def test_server_gate_and_agent_gate_agree(self):
+        """Contract §2: whichever side notices the expiry, the task ends in awaiting_approval without effect."""
+        task = self.phone.note("Vence justo antes del inicio", "phone-0010")[1]["task"]
+        self.phone.approve(task, ttl=60)
+        self.pc()
+        claimed = self.transport("POST", "/v1/agent/claim", {"max_tasks": 1})["tasks"][0]
+        self.clock.advance(61)
+        body = {"lease_id": claimed["lease_id"], "payload_sha256": task["payload_sha256"]}
+        with self.assertRaises(ag.ApiError) as refused:
+            self.transport("POST", f"/v1/agent/tasks/{task['id']}/start", body)
+        self.assertEqual((refused.exception.status, refused.exception.code), (409, "approval_expired"))
+        status = self.phone.task(task["id"])
+        self.assertEqual((status["state"], status["state_reason"]), (c.AWAITING_APPROVAL, "approval_expired"))
+        self.assertEqual(self.executor.runs, [])
 
     def test_uncertain_result_is_shown_and_never_repeated(self):
         task = self.phone.note("Efecto incierto", "phone-0007")[1]["task"]
@@ -264,7 +282,7 @@ class PhoneFlowTests(unittest.TestCase):
         uncertain = self.phone.task(task["id"])
         self.assertEqual(uncertain["state"], c.UNKNOWN)
         self.assertNotIn(str(self.dir), json.dumps(uncertain, ensure_ascii=False))
-        self.assertIn("<ruta local>", uncertain["result"]["message"])
+        self.assertEqual(uncertain["result"]["message"], "Resultado incierto: FileExistsError (errno 17)")
 
     def test_path_redaction(self):
         cases = {
@@ -275,6 +293,26 @@ class PhoneFlowTests(unittest.TestCase):
         }
         for raw, expected in cases.items():
             self.assertEqual(ag.redact_paths(raw), expected)
+
+    def test_presence_and_result_queries_never_claim_or_execute(self):
+        task = self.phone.note("Solo consultar", "phone-0011")[1]["task"]
+        self.phone.approve(task)
+        code = self.phone.call("POST", f"/v1/devices/{self.device['device_id']}/viewer-codes")[1]["code"]
+        viewer = ag.HttpTransport(self.base, "", allow_insecure_localhost=True).post_public("/v1/viewer/pair", {"code": code})
+        reader = ag.HttpTransport(self.base, viewer["viewer_token"], allow_insecure_localhost=True)
+        before = self.phone.task(task["id"])
+        for _ in range(5):
+            self.phone.call("GET", "/v1/devices")
+            self.phone.call("GET", "/v1/tasks?after_version=0")
+            self.phone.call("GET", f"/v1/tasks/{task['id']}")
+            reader("GET", "/v1/viewer/tasks?after_version=0")
+            request.urlopen(self.base + "/m/").read()
+            self.clock.advance(30)
+        after = self.phone.task(task["id"])
+        self.assertEqual((after["state"], after["lease_id"], after["attempts"], after["version"]),
+                         (c.APPROVED, None, 0, before["version"]))
+        self.assertEqual(self.phone.presence(), ["never_seen"])  # reads by the phone or the screen do not fake an online PC
+        self.assertEqual(self.executor.runs, [])
 
     def test_phone_page_is_served_with_strict_headers(self):
         with request.urlopen(self.base + "/m/") as response:

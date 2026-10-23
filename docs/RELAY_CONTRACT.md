@@ -29,7 +29,7 @@ Celular / WhatsApp ──HTTPS──▶ Relay (API + SQLite) ◀──HTTPS sali
 | Código de vinculación | 12 caracteres `XXXX-XXXX-XXXX`, 10 min | Un solo uso; 10 fallos por IP cada 10 min → 429. |
 | Tarea | `id` (`tsk_…`), `client_request_id`, `action`, `params`, `target_device_id`, `payload_sha256`, `state`, `state_reason`, `lease_id`, `attempts`, `result`, `version` | `UNIQUE(user_id, client_request_id)` = deduplicación. |
 | Aprobación | `id` (`apr_…`), `task_id`, `payload_sha256`, `expires_at` (≤ 24 h), `consumed_at`, `revoked_at` | De un solo uso; se consume en `start`. |
-| Resultado | `{message, output: {name, sha256, bytes, source_sha256?}}` | Solo metadatos: sin contenido ni rutas absolutas. El agente reemplaza las rutas locales de los mensajes de error por `<ruta local>`. |
+| Resultado | `{message, output: {name, sha256, bytes, source_sha256?}}` | Solo metadatos: sin contenido ni rutas absolutas. Fuera de la PC no sale texto de errores del sistema ni de FFmpeg: solo la clase y el `errno`; el detalle queda en el registro local. Además, el agente y el relay reemplazan cualquier ruta absoluta por `<ruta local>`. |
 | Evento | `at, actor, from_state, to_state, detail` | Auditoría permanente por tarea. |
 
 ### Acciones v1 (lista cerrada; todo lo demás → 400)
@@ -73,6 +73,13 @@ Garantías y no-garantías:
   ejecución automática por aprobación*. La aprobación se consume en `start` y un
   `unknown` nunca se reintenta solo.
 - `claimed` con lease vencido vuelve a `approved`, porque todavía no hubo efecto.
+- `claimed` cuya aprobación vence (o es revocada) vuelve **en ese momento** a `awaiting_approval`
+  con motivo `approval_expired`, y se libera la reserva. Da igual qué compuerta lo detecte:
+  - si es el servidor en `start`, responde 409 `approval_expired`;
+  - si es el agente por su reloj, no llama a `start` ni informa `failed`; abandona el trabajo y el
+    relay decide.
+
+  En ningún caso hay efecto ni estado `failed` por un vencimiento.
 - `running` con lease vencido pasa a `unknown`. Si después llega un informe real del
   agente, se acepta y la tarea queda resuelta.
 - `retry` sobre `unknown` exige `acknowledge_possible_duplicate: true` y una nueva

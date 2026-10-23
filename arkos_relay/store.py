@@ -143,9 +143,11 @@ class Store:
         for task in self.db.execute("SELECT * FROM tasks WHERE state=? AND lease_expires_at < ?", (c.RUNNING, now)).fetchall():
             # Started and silent: the effect may or may not exist. Keep the lease id so a late report is accepted.
             self._transition(task, c.UNKNOWN, "system", "lease_expired_during_execution")
-        for task in self.db.execute("SELECT * FROM tasks WHERE state=?", (c.APPROVED,)).fetchall():
+        for task in self.db.execute("SELECT * FROM tasks WHERE state IN (?,?)", (c.APPROVED, c.CLAIMED)).fetchall():
+            # Claimed means "not started": no effect yet, so an expired approval releases the lease at once.
             if not self._valid_approval(task, now):
-                self._transition(task, c.AWAITING_APPROVAL, "system", "approval_expired")
+                # lease_device_id is kept so the PC that held the lease gets "approval_expired", not 404.
+                self._transition(task, c.AWAITING_APPROVAL, "system", "approval_expired", lease_id=None, lease_expires_at=None)
 
     def _valid_approval(self, task, now):
         return self.db.execute(
@@ -491,6 +493,13 @@ class Store:
         now = self.clock()
         expired = False
         with self.tx() as db:
+            released = db.execute("SELECT state, state_reason FROM tasks WHERE id=? AND user_id=? AND lease_device_id=?",
+                                  (task_id, user_id, device_id)).fetchone()
+            if released and (released["state"], released["state_reason"]) == (c.AWAITING_APPROVAL, "approval_expired"):
+                expired = True  # the sweep at the start of this transaction already released it
+        if expired:
+            raise conflict("approval_expired", "La aprobación venció o fue revocada; se requiere una nueva")
+        with self.tx() as db:
             task = self._leased(user_id, device_id, task_id, lease_id)
             if task["state"] == c.RUNNING:
                 return self.public_task(task)  # retried start after a lost response
@@ -516,6 +525,8 @@ class Store:
         if outcome not in c.DEVICE_OUTCOMES:
             raise RelayError(400, "invalid_outcome", "outcome debe ser succeeded, failed o unknown")
         result = c.validate_result(result)
+        if "message" in result:
+            result["message"] = c.redact_local_paths(result["message"])  # defense in depth: older or foreign agents
         result_sha = hashlib.sha256(c.canonical({"outcome": outcome, "result": result})).hexdigest()
         with self.tx():
             task = self._leased(user_id, device_id, task_id, lease_id)
